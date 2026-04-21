@@ -1,7 +1,9 @@
 import Dexie, { type EntityTable } from "dexie";
 import type {
+  DailyCalories,
   ElectrolyteLog,
   FastingSession,
+  FoodLogEntry,
   MetabolicLog,
   UserSettings,
 } from "./types";
@@ -11,6 +13,8 @@ export const db = new Dexie("ember") as Dexie & {
   metabolicLogs: EntityTable<MetabolicLog, "id">;
   electrolyteLogs: EntityTable<ElectrolyteLog, "id">;
   userSettings: EntityTable<UserSettings, "id">;
+  foodLogEntries: EntityTable<FoodLogEntry, "id">;
+  dailyCalories: EntityTable<DailyCalories, "date">;
 };
 
 db.version(1).stores({
@@ -32,6 +36,15 @@ db.version(3).stores({
   metabolicLogs: "++id, timestamp, sourceId, *tags",
   electrolyteLogs: "++id, timestamp, *tags",
   userSettings: "id",
+});
+
+db.version(4).stores({
+  fastingSessions: "++id, startedAt, endedAt, protocol",
+  metabolicLogs: "++id, timestamp, sourceId, *tags",
+  electrolyteLogs: "++id, timestamp, *tags",
+  userSettings: "id",
+  foodLogEntries: "++id, date",
+  dailyCalories: "date",
 });
 
 export const DEFAULT_SETTINGS: UserSettings = {
