@@ -50,4 +50,25 @@ export interface UserSettings {
     optimal: [number, number];
   };
   theme: "system" | "light" | "dark";
+  loseIt?: {
+    email: string;
+    timezone: string;
+  };
+}
+
+export interface FoodLogEntry {
+  id?: number;
+  date: string;      // YYYY-MM-DD
+  name: string;
+  brand: string | null;
+  syncedAt: number;
+}
+
+export interface DailyCalories {
+  date: string;      // YYYY-MM-DD, primary key
+  caloriesBudget: number;
+  caloriesEaten: number;
+  caloriesRemaining: number;
+  exerciseCalories: number;
+  syncedAt: number;
 }
