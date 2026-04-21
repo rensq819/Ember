@@ -9,13 +9,13 @@ interface Props {
 
 export function ChartCard({ title, hint, empty, children }: Props) {
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
-      <header className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        {hint && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{hint}</span>}
+    <section style={{ borderRadius: 18, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', padding: '14px 16px 10px' }}>
+      <header style={{ marginBottom: 10, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <h3 style={{ fontFamily: '"DM Serif Display", Georgia, serif', fontSize: 18, fontWeight: 400, letterSpacing: -0.3, lineHeight: 1, margin: 0 }}>{title}</h3>
+        {hint && <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'hsl(var(--muted-foreground))' }}>{hint}</span>}
       </header>
       {empty ? (
-        <div className="py-10 text-center text-xs text-muted-foreground">{empty}</div>
+        <div style={{ padding: '32px 0', textAlign: 'center', fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>{empty}</div>
       ) : (
         children
       )}

@@ -38,8 +38,8 @@ export function ChartsRoute() {
   const gkSeries = useMemo(() => toGlucoseKetoneSeries(metabolicFiltered), [metabolicFiltered]);
   const fastBars = useMemo(() => toFastBars(fastsInRange), [fastsInRange]);
 
-  const trendColor = digest.trend === 'improving' ? '#A5B77A' : digest.trend === 'worsening' ? '#B97A63' : 'hsl(var(--muted-foreground))';
-  const trendArrow = digest.trend === 'improving' ? '↘' : digest.trend === 'worsening' ? '↗' : '→';
+  const trendColor = digest.gkiTrend === 'improving' ? '#A5B77A' : digest.gkiTrend === 'worsening' ? '#B97A63' : 'hsl(var(--muted-foreground))';
+  const trendArrow = digest.gkiTrend === 'improving' ? '↘' : digest.gkiTrend === 'worsening' ? '↗' : '→';
 
   return (
     <div className="mx-auto max-w-md">
@@ -88,17 +88,19 @@ export function ChartsRoute() {
           </div>
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
             <span className="font-display" style={{ fontSize: 64, letterSpacing: -2, lineHeight: 0.9 }}>
-              {digest.avgGki.toFixed(1)}
+              {digest.avgGki != null ? digest.avgGki.toFixed(1) : '—'}
             </span>
             <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>avg GKI</span>
-            <span style={{ marginLeft: 6, padding: '3px 10px', borderRadius: 999, fontSize: 11, color: trendColor, background: hexA(trendColor.startsWith('hsl') ? '#888' : trendColor, 0.12), letterSpacing: 0.5 }}>
-              {trendArrow} {digest.trend}
-            </span>
+            {digest.gkiTrend && (
+              <span style={{ marginLeft: 6, padding: '3px 10px', borderRadius: 999, fontSize: 11, color: trendColor, background: hexA(trendColor, 0.12), letterSpacing: 0.5 }}>
+                {trendArrow} {digest.gkiTrend}
+              </span>
+            )}
           </div>
           <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, paddingTop: 16, borderTop: '1px solid hsl(var(--border))' }}>
             {[
-              { label: 'Total fasting', value: `${digest.totalFastHours}h` },
-              { label: 'Longest fast',  value: `${digest.longestHours}h`  },
+              { label: 'Total fasting', value: `${Math.round(digest.fastingHours)}h` },
+              { label: 'Longest fast',  value: `${Math.round(digest.longestFastHours)}h` },
               { label: 'Readings',      value: String(digest.readingCount) },
             ].map(({ label, value }) => (
               <div key={label}>
