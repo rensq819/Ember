@@ -38,7 +38,7 @@ export function ChartsRoute() {
   const gkSeries = useMemo(() => toGlucoseKetoneSeries(metabolicFiltered), [metabolicFiltered]);
   const fastBars = useMemo(() => toFastBars(fastsInRange), [fastsInRange]);
 
-  const trendColor = digest.gkiTrend === 'improving' ? '#A5B77A' : digest.gkiTrend === 'worsening' ? '#B97A63' : 'hsl(var(--muted-foreground))';
+  const trendColor = digest.gkiTrend === 'improving' ? '#9FD85A' : digest.gkiTrend === 'worsening' ? '#E26640' : 'hsl(var(--muted-foreground))';
   const trendArrow = digest.gkiTrend === 'improving' ? '↘' : digest.gkiTrend === 'worsening' ? '↗' : '→';
 
   return (
@@ -49,7 +49,7 @@ export function ChartsRoute() {
           Phase 03 · See
         </div>
         <h1 className="font-display" style={{ fontWeight: 400, fontSize: 44, letterSpacing: -1.2, margin: '8px 0 0', lineHeight: 1 }}>
-          Patterns in <em style={{ fontStyle: 'italic', color: '#A5B77A' }}>motion.</em>
+          Patterns in <em style={{ fontStyle: 'italic', color: '#9FD85A' }}>motion.</em>
         </h1>
 
         {/* Range toggle */}
@@ -105,7 +105,7 @@ export function ChartsRoute() {
             ].map(({ label, value }) => (
               <div key={label}>
                 <div className="text-xs tracking-[1.2px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>{label}</div>
-                <div className="font-mono mt-0.5" style={{ fontSize: 20, letterSpacing: -0.5, fontFeatureSettings: '"tnum"' }}>{value}</div>
+                <div className="font-display mt-0.5" style={{ fontSize: 20, letterSpacing: -0.5, lineHeight: 1 }}>{value}</div>
               </div>
             ))}
           </div>
@@ -113,7 +113,7 @@ export function ChartsRoute() {
       </div>
 
       {/* GKI chart card */}
-      <ChartCard eyebrow="GKI" title="Glucose · Ketone index" subtitle="Shaded band: 3–6 optimal zone." accent="#C89079">
+      <ChartCard eyebrow="GKI" title="Glucose · Ketone index" subtitle="Shaded band: 3–6 optimal zone." accent="#F08A3B">
         <GkiChart data={gkiSeries} />
       </ChartCard>
 
@@ -129,7 +129,7 @@ export function ChartsRoute() {
       )}
 
       {/* Fast duration chart */}
-      <ChartCard eyebrow="Duration" title="Fasts" subtitle="Amber = hit target · muted = short." accent="#D1B894">
+      <ChartCard eyebrow="Duration" title="Fasts" subtitle="Amber = hit target · muted = short." accent="#F5A64A">
         <FastDurationChart data={fastBars} />
       </ChartCard>
     </div>

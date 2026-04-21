@@ -10,7 +10,9 @@ import {
 import type { GlucoseKetonePoint } from "@/lib/insights";
 import type { GlucoseUnit } from "@/db/types";
 import { mmolToMgDl } from "@/lib/gki";
-import { ChartCard } from "./ChartCard";
+
+const GLU_COLOR = '#9FD85A';
+const KET_COLOR = '#D076B7';
 
 interface Props {
   data: GlucoseKetonePoint[];
@@ -19,7 +21,7 @@ interface Props {
 
 export function GlucoseKetoneChart({ data, unit }: Props) {
   if (data.length === 0) {
-    return <ChartCard title="Glucose + ketones" empty="No readings in range." />;
+    return <div style={{ padding: '32px 0', textAlign: 'center', fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>No readings in range.</div>;
   }
 
   const rendered = data.map((d) => ({
@@ -29,9 +31,9 @@ export function GlucoseKetoneChart({ data, unit }: Props) {
   }));
 
   return (
-    <ChartCard title="Glucose + ketones" hint={`Dual axis · glucose ${unit} · ketones mmol/L`}>
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={rendered} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+    <>
+      <ResponsiveContainer width="100%" height={160}>
+        <LineChart data={rendered} margin={{ top: 8, right: 28, left: -16, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
           <XAxis
             dataKey="timestamp"
@@ -40,34 +42,37 @@ export function GlucoseKetoneChart({ data, unit }: Props) {
             scale="time"
             tickFormatter={(ts) => new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
             stroke="hsl(var(--muted-foreground))"
-            fontSize={10}
+            fontSize={9}
+            fontFamily='"Geist Mono", monospace'
           />
           <YAxis
             yAxisId="glucose"
-            stroke="#60a5fa"
-            fontSize={10}
-            width={32}
+            stroke={GLU_COLOR}
+            fontSize={9}
+            fontFamily='"Geist Mono", monospace'
+            width={28}
+            opacity={0.8}
           />
           <YAxis
             yAxisId="ketones"
             orientation="right"
-            stroke="hsl(var(--ember))"
-            fontSize={10}
-            width={28}
+            stroke={KET_COLOR}
+            fontSize={9}
+            fontFamily='"Geist Mono", monospace'
+            width={24}
+            opacity={0.8}
           />
           <Tooltip
             contentStyle={{
               background: "hsl(var(--card))",
               border: "1px solid hsl(var(--border))",
-              borderRadius: "0.5rem",
-              fontSize: "12px",
+              borderRadius: 12,
+              fontSize: 12,
+              fontFamily: '"Geist", system-ui, sans-serif',
             }}
             labelFormatter={(ts) =>
               new Date(ts as number).toLocaleString(undefined, {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
+                month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
               })
             }
             formatter={(value, name) => {
@@ -77,28 +82,18 @@ export function GlucoseKetoneChart({ data, unit }: Props) {
               return [`${n.toFixed(2)} mmol/L`, "Ketones"];
             }}
           />
-          <Line
-            yAxisId="glucose"
-            type="monotone"
-            dataKey="glucose"
-            stroke="#60a5fa"
-            strokeWidth={2}
-            dot={{ r: 2, fill: "#60a5fa" }}
-            connectNulls
-            isAnimationActive={false}
-          />
-          <Line
-            yAxisId="ketones"
-            type="monotone"
-            dataKey="ketones"
-            stroke="hsl(var(--ember))"
-            strokeWidth={2}
-            dot={{ r: 2, fill: "hsl(var(--ember))" }}
-            connectNulls
-            isAnimationActive={false}
-          />
+          <Line yAxisId="glucose" type="monotone" dataKey="glucose" stroke={GLU_COLOR} strokeWidth={1.8} dot={{ r: 2, fill: GLU_COLOR, strokeWidth: 0 }} connectNulls isAnimationActive={false} />
+          <Line yAxisId="ketones" type="monotone" dataKey="ketones" stroke={KET_COLOR} strokeWidth={1.8} dot={{ r: 2, fill: KET_COLOR, strokeWidth: 0 }} connectNulls isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
-    </ChartCard>
+      <div style={{ display: 'flex', gap: 14, marginTop: 6, paddingLeft: 12 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, color: GLU_COLOR, fontFamily: '"Geist", system-ui, sans-serif' }}>
+          <svg width="6" height="6"><circle cx="3" cy="3" r="3" fill={GLU_COLOR}/></svg>Glucose
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, color: KET_COLOR, fontFamily: '"Geist", system-ui, sans-serif' }}>
+          <svg width="6" height="6"><circle cx="3" cy="3" r="3" fill={KET_COLOR}/></svg>Ketones
+        </span>
+      </div>
+    </>
   );
 }
