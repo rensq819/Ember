@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__64072804-7679-4ab1-8f71-36dcad20c5ba__notion-search",
+      "mcp__64072804-7679-4ab1-8f71-36dcad20c5ba__notion-fetch",
+      "Bash(npm --version)",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(Get-Command node,npm,nvm,winget,choco,scoop -ErrorAction SilentlyContinue | Format-Table Name,Source; Get-ChildItem \"C:\\\\Program Files\\\\nodejs\",\"$env:LOCALAPPDATA\\\\nvm\",\"$env:APPDATA\\\\nvm\",\"$env:ProgramData\\\\nvm\" -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --silent)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); node --version; npm --version)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm.cmd --version)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm.cmd install --no-audit --no-fund --loglevel=error)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm.cmd run typecheck)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npm.cmd run dev)",
+      "Bash(npm.cmd run *)",
+      "Bash(npx tsc *)",
+      "PowerShell(npm.cmd run typecheck)",
+      "PowerShell(& \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" run typecheck)"
+    ]
+  }
+}

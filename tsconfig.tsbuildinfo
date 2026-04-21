@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/router.tsx","./src/components/applayout.tsx","./src/components/bottomnav.tsx","./src/db/index.ts","./src/db/types.ts","./src/lib/fasting-stages.ts","./src/lib/gki.ts","./src/lib/utils.ts","./src/routes/charts.tsx","./src/routes/fast.tsx","./src/routes/log.tsx","./src/routes/settings.tsx"],"errors":true,"version":"5.9.3"}
