@@ -264,6 +264,10 @@ function extractFoodLog(gwt, targetDay) {
   const fiRef = findRef(st, "com.loseit.core.client.model.FoodIdentifier/");
   const fleRef = findRef(st, "com.loseit.core.client.model.FoodLogEntry/");
 
+  if (fiRef === -1 || fleRef === -1) {
+    return { date: dayToDateStr(targetDay), entries: [] };
+  }
+
   const classRe = /^(com\.|java\.|org\.|net\.|\[)/;
   const skip = new Set([
     "Default",
@@ -327,7 +331,7 @@ function extractFoodLog(gwt, targetDay) {
   const entries = [];
   const seen = new Set();
   for (const f of positions) {
-    if (!dayPos.some((p) => Math.abs(p - f.pos) < 80)) continue;
+    if (!dayPos.some((p) => Math.abs(p - f.pos) < 300)) continue;
     const k = `${f.name}|${f.brand}`;
     if (seen.has(k)) continue;
     seen.add(k);
@@ -346,24 +350,26 @@ function extractDailySummary(gwt, targetDay) {
     if (!isDayNum(v[i])) continue;
     const tz = v[i - 1];
     if (typeof tz !== "number" || tz < -12 || tz > 14) continue;
-    if (typeof v[i + 1] !== "string") continue;
+    // Removed strict `typeof v[i+1] !== "string"` check — field may be an integer
+    // string-table reference in some LoseIt versions rather than an inline string.
     if (v[i + 16] !== v[i]) continue;
 
     const d = v[i];
     if (seen.has(d)) continue;
     seen.add(d);
 
-    const budget = v[i + 6];
+    const tdee = v[i + 6];
+    const budget = v[i + 9];
     const eaten = v[i + 11];
     const exercise = v[i + 13];
-    if (typeof budget !== "number" || typeof eaten !== "number") continue;
+    if (typeof tdee !== "number" || typeof eaten !== "number") continue;
 
     entries.push({
       date: dayToDateStr(d),
       dayNumber: d,
-      caloriesBudget: Math.round(budget),
+      caloriesBudget: Math.round(typeof budget === "number" ? budget : tdee),
       caloriesEaten: Math.round(eaten),
-      caloriesRemaining: Math.round(budget - eaten),
+      caloriesRemaining: Math.round((typeof budget === "number" ? budget : tdee) - eaten),
       exerciseCalories: Math.round(
         typeof exercise === "number" ? exercise : 0
       ),
@@ -408,6 +414,7 @@ function parseDate(s) {
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+  console.log(`→ ${req.method} ${url.pathname}`);
 
   if (req.method === "OPTIONS") {
     res.writeHead(204, CORS);

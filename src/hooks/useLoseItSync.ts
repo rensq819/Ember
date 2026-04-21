@@ -53,6 +53,7 @@ export function useLoseItSync() {
       localStorage.setItem(LAST_SYNC_KEY, String(syncedAt));
       setLastSyncedAt(syncedAt);
     } catch (e) {
+      console.error("[loseit] sync error:", e);
       const msg = e instanceof Error ? e.message : "Sync failed";
       const friendlyMsg =
         msg.includes("Failed to fetch") || msg.includes("NetworkError")

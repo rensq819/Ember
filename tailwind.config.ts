@@ -43,8 +43,10 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+        display: ['"DM Serif Display"', '"Fraunces"', 'Georgia', 'serif'],
+        serif:   ['"DM Serif Display"', '"Fraunces"', 'Georgia', 'serif'],
+        sans:    ['"Geist"', '"Inter"', '-apple-system', 'system-ui', 'sans-serif'],
+        mono:    ['"Geist Mono"', '"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         lg: "var(--radius)",

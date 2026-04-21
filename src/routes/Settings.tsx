@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Plug, CheckCircle2, XCircle } from "lucide-react";
+import { Plug } from "lucide-react";
 import { DEFAULT_SETTINGS, db, getSettings } from "@/db";
 import type { GlucoseUnit, UserSettings } from "@/db/types";
 import { extractHashtagsFromNotes, type CleanupResult } from "@/lib/data-maintenance";
@@ -10,7 +10,12 @@ export function SettingsRoute() {
   const [cleanup, setCleanup] = useState<CleanupResult | null>(null);
   const [cleaning, setCleaning] = useState(false);
 
-  // LoseIt state
+  // Theme
+  const [theme, setThemeState] = useState<'dark' | 'light'>(() =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  );
+
+  // LoseIt
   const [liEmail, setLiEmail] = useState("");
   const [liPassword, setLiPassword] = useState("");
   const [liTimezone, setLiTimezone] = useState("America/Chicago");
@@ -22,18 +27,22 @@ export function SettingsRoute() {
   useEffect(() => {
     getSettings().then((s) => {
       setSettings(s);
-      if (s.loseIt) {
-        setLiEmail(s.loseIt.email);
-        setLiTimezone(s.loseIt.timezone);
-      }
+      if (s.loseIt) { setLiEmail(s.loseIt.email); setLiTimezone(s.loseIt.timezone); }
     });
     loseItHealth()
-      .then((h) => {
-        setLiAuthenticated(h.authenticated);
-        setLiUsername(h.username);
-      })
+      .then((h) => { setLiAuthenticated(h.authenticated); setLiUsername(h.username); })
       .catch(() => setLiAuthenticated(false));
   }, []);
+
+  function applyTheme(t: 'dark' | 'light') {
+    setThemeState(t);
+    if (t === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('ember-theme', t);
+  }
 
   async function updateUnit(unit: GlucoseUnit) {
     const next = { ...settings, glucoseUnit: unit };
@@ -57,7 +66,7 @@ export function SettingsRoute() {
       setLiStatus({
         ok: false,
         message: msg.includes("Failed to fetch")
-          ? "Proxy not running — start it with: node scripts/loseit-proxy.js"
+          ? "Proxy not running — start with: node scripts/loseit-proxy.js"
           : msg,
       });
     } finally {
@@ -76,123 +85,216 @@ export function SettingsRoute() {
     }
   }
 
-  return (
-    <div className="mx-auto max-w-md space-y-8 px-6 py-10">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Local-only. Nothing leaves your device.</p>
-      </header>
+  const inputStyle = {
+    width: '100%', borderRadius: 12, border: '1px solid hsl(var(--border))',
+    background: 'hsl(var(--background))', color: 'hsl(var(--foreground))',
+    padding: '10px 14px', fontSize: 14,
+    outline: 'none', fontFamily: '"Geist", system-ui, sans-serif',
+  };
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Glucose unit</h2>
-        <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-card p-1">
-          {(["mmol/L", "mg/dL"] as const).map((unit) => (
-            <button
-              key={unit}
-              onClick={() => updateUnit(unit)}
-              className={
-                settings.glucoseUnit === unit
-                  ? "rounded-md bg-ember py-2 text-sm font-medium text-ember-foreground"
-                  : "rounded-md py-2 text-sm text-muted-foreground hover:text-foreground"
-              }
-            >
-              {unit}
-            </button>
+  return (
+    <div className="mx-auto max-w-md">
+      {/* Editorial header */}
+      <div className="px-6" style={{ paddingTop: 64 }}>
+        <div className="text-xs font-semibold tracking-[2.4px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          Phase 04 · Tune
+        </div>
+        <h1 className="font-display" style={{ fontWeight: 400, fontSize: 44, letterSpacing: -1.2, margin: '8px 0 0', lineHeight: 1 }}>
+          Your <em style={{ fontStyle: 'italic', color: '#8A7FA8' }}>ember,</em><br />your way.
+        </h1>
+        <p className="text-sm mt-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          Local-only. Nothing leaves this device.
+        </p>
+      </div>
+
+      {/* Appearance — Dusk / Paper toggle */}
+      <SettingsSection title="Appearance">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {(['dark', 'light'] as const).map((t) => {
+            const active = theme === t;
+            const isDarkCard = t === 'dark';
+            return (
+              <button key={t} onClick={() => applyTheme(t)} style={{
+                padding: '16px 14px', borderRadius: 18, cursor: 'pointer', textAlign: 'left',
+                border: `1.5px solid ${active ? (isDarkCard ? '#D4A48E' : '#B97A63') : 'hsl(var(--border))'}`,
+                background: isDarkCard ? '#12100D' : '#F4EFE6',
+                color: isDarkCard ? '#F5EDE0' : '#1C1610',
+                position: 'relative', fontFamily: '"Geist", system-ui, sans-serif',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 10, right: 10,
+                  width: 14, height: 14, borderRadius: 7,
+                  border: `1.5px solid ${active ? (isDarkCard ? '#D4A48E' : '#B97A63') : 'rgba(128,128,128,0.4)'}`,
+                  background: active ? (isDarkCard ? '#D4A48E' : '#B97A63') : 'transparent',
+                }} />
+                <div className="font-display" style={{ fontSize: 20, letterSpacing: -0.3 }}>
+                  {isDarkCard ? 'Dusk' : 'Paper'}
+                </div>
+                <div style={{ fontSize: 11, opacity: 0.65, marginTop: 2 }}>
+                  {isDarkCard ? 'Warm off-black · embers glow' : 'Cream canvas · editorial calm'}
+                </div>
+                <div style={{ marginTop: 10, display: 'flex', gap: 3 }}>
+                  {['#D4A48E', '#B97A63', '#8A7FA8', '#A5B77A'].map((c) => (
+                    <div key={c} style={{ flex: 1, height: 4, background: c, borderRadius: 2 }} />
+                  ))}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </SettingsSection>
+
+      {/* Glucose unit */}
+      <SettingsSection title="Glucose unit">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, borderRadius: 999, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}>
+          {(['mmol/L', 'mg/dL'] as const).map((u) => (
+            <button key={u} onClick={() => updateUnit(u)} style={{
+              padding: '10px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              background: settings.glucoseUnit === u ? 'hsl(var(--foreground))' : 'transparent',
+              color: settings.glucoseUnit === u ? 'hsl(var(--background))' : 'hsl(var(--muted-foreground))',
+              fontFamily: '"Geist", system-ui, sans-serif', fontSize: 13, fontWeight: 600,
+            }}>{u}</button>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">Ketones are always in mmol/L (there is no widely used alternative).</p>
-      </section>
+        <p className="text-xs mt-2.5" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.5 }}>
+          Ketones always mmol/L — no widely used alternative.
+        </p>
+      </SettingsSection>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">LoseIt food log</h2>
+      {/* GKI zones reference */}
+      <SettingsSection title="GKI zones">
+        <div style={{ borderRadius: 20, padding: '16px 18px', background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
+            {[
+              { k: '<1',  label: 'Therapeutic', c: '#A5B77A' },
+              { k: '1–3', label: 'Deep',        c: '#8A7FA8' },
+              { k: '3–6', label: 'Optimal',     c: '#C89079' },
+              { k: '6–9', label: 'Mild',        c: '#D1B894' },
+              { k: '>9',  label: 'Out',         c: '#B97A63' },
+            ].map((z) => (
+              <div key={z.k} style={{ textAlign: 'center' }}>
+                <div style={{ height: 4, background: z.c, borderRadius: 2 }} />
+                <div className="font-mono mt-1.5" style={{ fontSize: 11 }}>{z.k}</div>
+                <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))', fontSize: 9, letterSpacing: 0.5 }}>{z.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </SettingsSection>
 
+      {/* LoseIt */}
+      <SettingsSection title="LoseIt food log">
         {liAuthenticated === true && (
-          <div className="flex items-center gap-2 text-sm text-green-400">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span>Connected{liUsername ? ` as ${liUsername}` : ""}</span>
+          <div className="flex items-center gap-2 text-sm mb-3" style={{ color: '#A5B77A' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#A5B77A', display: 'inline-block', boxShadow: '0 0 8px #A5B77A' }} />
+            Connected{liUsername ? ` as ${liUsername}` : ""}
           </div>
         )}
         {liAuthenticated === false && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <XCircle className="h-4 w-4 shrink-0" />
-            <span>Not connected — enter credentials below</span>
+          <div className="flex items-center gap-2 text-xs mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1.5px solid hsl(var(--muted-foreground))', display: 'inline-block' }} />
+            Not connected — enter credentials below
           </div>
         )}
-
         <div className="space-y-2">
-          <input
-            type="email"
-            placeholder="LoseIt email"
-            value={liEmail}
-            onChange={(e) => setLiEmail(e.target.value)}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ember"
-          />
-          <input
-            type="password"
-            placeholder="LoseIt password"
-            value={liPassword}
-            onChange={(e) => setLiPassword(e.target.value)}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ember"
-          />
-          <input
-            type="text"
-            placeholder="Timezone (e.g. America/New_York)"
-            value={liTimezone}
-            onChange={(e) => setLiTimezone(e.target.value)}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ember"
-          />
+          <input type="email" placeholder="LoseIt email" value={liEmail} onChange={(e) => setLiEmail(e.target.value)} style={inputStyle} />
+          <input type="password" placeholder="Password" value={liPassword} onChange={(e) => setLiPassword(e.target.value)} style={inputStyle} />
+          <input type="text" placeholder="Timezone (e.g. America/New_York)" value={liTimezone} onChange={(e) => setLiTimezone(e.target.value)} style={inputStyle} />
         </div>
-
         <button
           onClick={connectLoseIt}
           disabled={liConnecting || !liEmail || !liPassword}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card py-2.5 text-sm text-foreground hover:border-ember/50 disabled:opacity-60"
+          style={{
+            marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            borderRadius: 14, border: '1px solid hsl(var(--border))', padding: '12px',
+            background: 'hsl(var(--card))', color: 'hsl(var(--foreground))',
+            fontSize: 14, fontWeight: 500, cursor: 'pointer', opacity: (liConnecting || !liEmail || !liPassword) ? 0.6 : 1,
+            fontFamily: '"Geist", system-ui, sans-serif',
+          }}
         >
-          <Plug className="h-4 w-4" />
+          <Plug size={14} />
           {liConnecting ? "Connecting…" : "Connect LoseIt"}
         </button>
-
         {liStatus && (
-          <div
-            className={`rounded-md border px-3 py-2 text-xs ${
-              liStatus.ok
-                ? "border-green-500/30 bg-green-500/5 text-green-400"
-                : "border-red-500/30 bg-red-500/5 text-red-400"
-            }`}
-          >
-            {liStatus.message}
-          </div>
+          <div style={{
+            marginTop: 8, borderRadius: 12, padding: '10px 14px', fontSize: 12,
+            border: `1px solid ${liStatus.ok ? 'rgba(165,183,122,0.3)' : 'rgba(185,122,99,0.3)'}`,
+            background: liStatus.ok ? 'rgba(165,183,122,0.06)' : 'rgba(185,122,99,0.06)',
+            color: liStatus.ok ? '#A5B77A' : '#B97A63',
+          }}>{liStatus.message}</div>
         )}
-
-        <p className="text-xs text-muted-foreground">
-          Credentials are sent to the local proxy only — never stored in the app.
-          Start the proxy first: <span className="font-mono">node scripts/loseit-proxy.js</span>
+        <p className="text-xs mt-2.5" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.5 }}>
+          Credentials go to the local proxy only. Start with:{' '}
+          <span className="font-mono">node scripts/loseit-proxy.js</span>
         </p>
-      </section>
+      </SettingsSection>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Data maintenance</h2>
-        <button
-          onClick={runCleanup}
-          disabled={cleaning}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card py-2.5 text-sm text-foreground hover:border-ember/50 disabled:opacity-60"
-        >
-          <Sparkles className="h-4 w-4" />
-          {cleaning ? "Scanning…" : "Extract #hashtags from notes"}
-        </button>
-        <p className="text-xs text-muted-foreground">
-          Moves any <span className="font-mono">#tag</span> tokens out of old notes into the proper tags field, then trims the notes. Safe to run any time — it merges with existing tags and only touches rows that still have hashtags in notes.
-        </p>
+      {/* Data */}
+      <SettingsSection title="Data">
+        <div style={{ borderRadius: 20, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', overflow: 'hidden' }}>
+          <button
+            onClick={runCleanup}
+            disabled={cleaning}
+            style={{
+              width: '100%', padding: '15px 18px', border: 'none', background: 'transparent',
+              borderBottom: '1px solid hsl(var(--border))',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              textAlign: 'left', cursor: 'pointer', color: 'hsl(var(--foreground))',
+              fontFamily: '"Geist", system-ui, sans-serif', opacity: cleaning ? 0.6 : 1,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{cleaning ? "Scanning…" : "Extract #hashtags from notes"}</div>
+              <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Sweep notes, promote tags properly.</div>
+            </div>
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="1.6" strokeLinecap="round"><path d="M1 1l6 6-6 6"/></svg>
+          </button>
+          <button
+            style={{
+              width: '100%', padding: '15px 18px', border: 'none', background: 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              textAlign: 'left', cursor: 'pointer', fontFamily: '"Geist", system-ui, sans-serif',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: '#B97A63' }}>Clear local database</div>
+              <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Permanent. Can't be undone.</div>
+            </div>
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="1.6" strokeLinecap="round"><path d="M1 1l6 6-6 6"/></svg>
+          </button>
+        </div>
         {cleanup && (
-          <div className="rounded-md border border-ember/30 bg-ember/5 px-3 py-2 text-xs text-muted-foreground">
-            <span className="text-foreground">
+          <div style={{ marginTop: 8, borderRadius: 12, padding: '10px 14px', fontSize: 12, border: '1px solid rgba(200,144,121,0.3)', background: 'rgba(200,144,121,0.06)', color: 'hsl(var(--muted-foreground))' }}>
+            <span style={{ color: 'hsl(var(--foreground))' }}>
               {cleanup.updated === 0 ? "Already clean" : `Updated ${cleanup.updated} row${cleanup.updated === 1 ? "" : "s"}`}
             </span>
             {cleanup.updated > 0 && <> · extracted {cleanup.tagsExtracted} tag{cleanup.tagsExtracted === 1 ? "" : "s"}</>}
-            {" "}({cleanup.scanned} total scanned)
+            {" "}({cleanup.scanned} scanned)
           </div>
         )}
-      </section>
+      </SettingsSection>
+
+      {/* Footer */}
+      <div style={{ padding: '36px 24px 24px', textAlign: 'center' }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8, background: '#C89079',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          color: '#1F1C18', fontFamily: '"DM Serif Display", serif', fontSize: 16,
+        }}>e</div>
+        <div className="font-display mt-2.5" style={{ fontSize: 18, letterSpacing: -0.3 }}>Ember</div>
+        <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Fast well. Measure quietly.</div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="px-6" style={{ paddingTop: 26 }}>
+      <div className="text-xs font-semibold tracking-[1.6px] uppercase mb-2.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        {title}
+      </div>
+      {children}
     </div>
   );
 }

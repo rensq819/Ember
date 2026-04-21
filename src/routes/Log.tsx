@@ -12,33 +12,28 @@ import { cn } from "@/lib/utils";
 
 type Tab = "metabolic" | "electrolyte" | "food";
 
+function localDateStr() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+}
+
 function FoodTab() {
   const { sync, syncing, error, lastSyncedAt } = useLoseItSync();
-
-  const today = new Date().toISOString().slice(0, 10);
-  const entries = useLiveQuery(
-    () => db.foodLogEntries.where("date").equals(today).toArray(),
-    [today]
-  );
+  const today = localDateStr();
+  const entries = useLiveQuery(() => db.foodLogEntries.where("date").equals(today).toArray(), [today]);
   const summary = useLiveQuery(() => db.dailyCalories.get(today), [today]);
-
-  const minutesAgo =
-    lastSyncedAt ? Math.floor((Date.now() - lastSyncedAt) / 60_000) : null;
+  const minutesAgo = lastSyncedAt ? Math.floor((Date.now() - lastSyncedAt) / 60_000) : null;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          {minutesAgo === null
-            ? "Never synced"
-            : minutesAgo < 1
-              ? "Synced just now"
-              : `Synced ${minutesAgo}m ago`}
+        <span className="text-xs font-mono" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          {minutesAgo === null ? "Never synced" : minutesAgo < 1 ? "Synced just now" : `Synced ${minutesAgo}m ago`}
         </span>
         <button
           onClick={() => sync()}
           disabled={syncing}
-          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:border-ember/50 disabled:opacity-60"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', color: 'hsl(var(--muted-foreground))', fontSize: 12, cursor: 'pointer', opacity: syncing ? 0.6 : 1 }}
         >
           <RefreshCw className={cn("h-3 w-3", syncing && "animate-spin")} />
           {syncing ? "Syncing…" : "Sync"}
@@ -46,59 +41,61 @@ function FoodTab() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+        <div style={{ borderRadius: 12, border: '1px solid rgba(226,102,64,0.3)', background: 'rgba(226,102,64,0.05)', padding: '10px 14px', fontSize: 12, color: '#E26640' }}>
           {error}
         </div>
       )}
 
       {summary && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Eaten</span>
-            <span className="font-medium">{summary.caloriesEaten} cal</span>
+        <div style={{ borderRadius: 20, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', padding: '16px 18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <div>
+              <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>Eaten today</div>
+              <div className="font-mono" style={{ fontSize: 32, letterSpacing: -1, color: 'hsl(var(--foreground))', fontFeatureSettings: '"tnum"', marginTop: 2 }}>
+                {summary.caloriesEaten}<span style={{ fontSize: 14, color: 'hsl(var(--muted-foreground))' }}> cal</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>Budget</div>
+              <div className="font-mono" style={{ fontSize: 20, letterSpacing: -0.5, color: 'hsl(var(--foreground))', fontFeatureSettings: '"tnum"', marginTop: 2 }}>
+                {summary.caloriesBudget}
+              </div>
+            </div>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
-            <div
-              className="h-full rounded-full bg-ember transition-all"
-              style={{
-                width: `${Math.min(100, (summary.caloriesEaten / Math.max(1, summary.caloriesBudget)) * 100)}%`,
-              }}
-            />
+          <div style={{ height: 5, background: 'hsl(var(--border))', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 3,
+              background: summary.caloriesRemaining < 0 ? '#B97A63' : '#C89079',
+              width: `${Math.min(100, (summary.caloriesEaten / Math.max(1, summary.caloriesBudget)) * 100)}%`,
+              transition: 'width 0.4s ease',
+            }} />
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Budget: {summary.caloriesBudget}</span>
-            <span className={summary.caloriesRemaining < 0 ? "text-red-400" : ""}>
-              {summary.caloriesRemaining >= 0
-                ? `${summary.caloriesRemaining} remaining`
-                : `${Math.abs(summary.caloriesRemaining)} over`}
+          <div className="flex justify-between text-xs mt-2" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <span>{summary.exerciseCalories > 0 ? `+${summary.exerciseCalories} burned` : '\u00a0'}</span>
+            <span style={{ color: summary.caloriesRemaining < 0 ? '#B97A63' : 'hsl(var(--muted-foreground))' }}>
+              {summary.caloriesRemaining >= 0 ? `${summary.caloriesRemaining} remaining` : `${Math.abs(summary.caloriesRemaining)} over`}
             </span>
           </div>
-          {summary.exerciseCalories > 0 && (
-            <div className="text-xs text-muted-foreground">
-              +{summary.exerciseCalories} cal burned
-            </div>
-          )}
         </div>
       )}
 
       {entries && entries.length > 0 ? (
-        <div className="space-y-1">
-          {entries.map((e) => (
-            <div
-              key={e.id}
-              className="flex flex-col rounded-lg border border-border bg-card px-3 py-2"
-            >
-              <span className="text-sm">{e.name}</span>
-              {e.brand && (
-                <span className="text-xs text-muted-foreground">{e.brand}</span>
-              )}
+        <div style={{ borderRadius: 18, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', overflow: 'hidden' }}>
+          {entries.map((e, i) => (
+            <div key={e.id} style={{
+              padding: '12px 16px',
+              borderBottom: i < entries.length - 1 ? '1px solid hsl(var(--border))' : 'none',
+            }}>
+              <div style={{ fontSize: 14, color: 'hsl(var(--foreground))' }}>{e.name}</div>
+              {e.brand && <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>{e.brand}</div>}
             </div>
           ))}
         </div>
       ) : entries !== undefined && !syncing ? (
-        <p className="text-center text-sm text-muted-foreground py-6">
-          No food logged today — tap Sync to pull from LoseIt
-        </p>
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <div className="font-display" style={{ fontSize: 20, color: 'hsl(var(--muted-foreground))' }}>Nothing logged yet.</div>
+          <div className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Tap Sync to pull from LoseIt</div>
+        </div>
       ) : null}
     </div>
   );
@@ -110,51 +107,75 @@ export function LogRoute() {
   const electrolyte = useElectrolyteLogs(50);
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: "metabolic", label: "Glucose · Ketones" },
+    { key: "metabolic",   label: "Glucose · Ketones" },
     { key: "electrolyte", label: "Electrolytes" },
-    { key: "food", label: "Food" },
+    { key: "food",        label: "Food" },
   ];
 
-  return (
-    <div className="mx-auto max-w-md space-y-6 px-6 py-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Log</h1>
-        <p className="text-xs text-muted-foreground">Tap a tab to record, scroll for history.</p>
-      </header>
+  const accentColors: Record<Tab, string> = {
+    metabolic:   '#D076B7',
+    electrolyte: '#F5A64A',
+    food:        '#C89079',
+  };
 
-      <div className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-card p-1">
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={cn(
-              "rounded-md py-2 text-sm font-medium transition-colors",
-              tab === key
-                ? "bg-ember text-ember-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {label}
-          </button>
-        ))}
+  return (
+    <div className="mx-auto max-w-md" style={{ paddingBottom: 24 }}>
+      {/* Editorial header */}
+      <div className="px-6" style={{ paddingTop: 64 }}>
+        <div className="text-xs font-semibold tracking-[2.4px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          Phase 02 · Record
+        </div>
+        <h1 className="font-display" style={{ fontWeight: 400, fontSize: 44, letterSpacing: -1.2, margin: '8px 0 0', lineHeight: 1 }}>
+          Log a <em style={{ fontStyle: 'italic', color: accentColors[tab] }}>reading.</em>
+        </h1>
+        <p className="text-sm mt-3" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.55 }}>
+          Pair glucose + ketones to compute GKI. Or track electrolytes.
+        </p>
       </div>
 
-      {tab === "metabolic" ? (
-        <div className="space-y-4">
-          <GlucoseKetoneForm />
-          <CsvImportButton />
+      {/* Pill tab switcher */}
+      <div className="px-6" style={{ paddingTop: 22 }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4,
+          padding: 4, borderRadius: 999,
+          background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))',
+        }}>
+          {TABS.map(({ key, label }) => (
+            <button key={key} onClick={() => setTab(key)} style={{
+              padding: '10px 6px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, letterSpacing: -0.1,
+              background: tab === key ? 'hsl(var(--foreground))' : 'transparent',
+              color: tab === key ? 'hsl(var(--background))' : 'hsl(var(--muted-foreground))',
+              transition: 'all 0.2s',
+              fontFamily: '"Geist", system-ui, sans-serif',
+            }}>{label}</button>
+          ))}
         </div>
-      ) : tab === "electrolyte" ? (
-        <ElectrolyteForm />
-      ) : (
-        <FoodTab />
-      )}
+      </div>
 
+      {/* Tab content */}
+      <div className="px-6" style={{ paddingTop: 22 }}>
+        {tab === "metabolic" ? (
+          <div className="space-y-4">
+            <GlucoseKetoneForm />
+            <CsvImportButton />
+          </div>
+        ) : tab === "electrolyte" ? (
+          <ElectrolyteForm />
+        ) : (
+          <FoodTab />
+        )}
+      </div>
+
+      {/* History */}
       {tab !== "food" && (
-        <section className="space-y-2 pt-2">
-          <h2 className="text-xs uppercase tracking-wider text-muted-foreground">History</h2>
+        <div className="px-6" style={{ paddingTop: 34 }}>
+          <div style={{ marginBottom: 12 }}>
+            <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>Ledger</div>
+            <div className="font-display" style={{ fontSize: 26, letterSpacing: -0.5, lineHeight: 1 }}>History</div>
+          </div>
           <LogHistory metabolic={metabolic} electrolyte={electrolyte} />
-        </section>
+        </div>
       )}
     </div>
   );

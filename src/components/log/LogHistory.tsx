@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Tag as TagIcon, Trash2, X } from "lucide-react";
+import { Check, Pencil, Trash2, X } from "lucide-react";
 import { db } from "@/db";
 import type { ElectrolyteLog, MetabolicLog } from "@/db/types";
 import { gkiZone, mmolToMgDl } from "@/lib/gki";
@@ -52,10 +52,14 @@ export function LogHistory({ metabolic, electrolyte }: Props) {
     else await db.electrolyteLogs.delete(id);
   }
 
-  async function saveTags(entry: Entry, tags: string[]) {
+  async function saveEntryEdits(entry: Entry, notes: string, tags: string[]) {
     const id = entry.row.id;
     if (id === undefined) return;
-    const patch = { tags: tags.length > 0 ? tags : undefined };
+    const trimmedNotes = notes.trim();
+    const patch = {
+      notes: trimmedNotes.length > 0 ? trimmedNotes : undefined,
+      tags: tags.length > 0 ? tags : undefined,
+    };
     if (entry.kind === "metabolic") await db.metabolicLogs.update(id, patch);
     else await db.electrolyteLogs.update(id, patch);
     setEditing(null);
@@ -78,10 +82,11 @@ export function LogHistory({ metabolic, electrolyte }: Props) {
                 <ElectrolyteRow row={entry.row} />
               )}
               {isEditing ? (
-                <TagEditor
-                  initial={entry.row.tags ?? []}
+                <EntryEditor
+                  initialNotes={entry.row.notes ?? ""}
+                  initialTags={entry.row.tags ?? []}
                   suggestions={suggestions}
-                  onSave={(tags) => saveTags(entry, tags)}
+                  onSave={(notes, tags) => saveEntryEdits(entry, notes, tags)}
                   onCancel={() => setEditing(null)}
                 />
               ) : (
@@ -93,9 +98,9 @@ export function LogHistory({ metabolic, electrolyte }: Props) {
                 <button
                   onClick={() => setEditing(key)}
                   className="text-muted-foreground hover:text-ember"
-                  aria-label="Edit tags"
+                  aria-label="Edit notes and tags"
                 >
-                  <TagIcon className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                 </button>
               )}
               <button
@@ -136,24 +141,37 @@ function MetabolicRow({ row, unit }: { row: MetabolicLog; unit: "mmol/L" | "mg/d
   );
 }
 
-function TagEditor({
-  initial,
+function EntryEditor({
+  initialNotes,
+  initialTags,
   suggestions,
   onSave,
   onCancel,
 }: {
-  initial: string[];
+  initialNotes: string;
+  initialTags: string[];
   suggestions: string[];
-  onSave: (tags: string[]) => void;
+  onSave: (notes: string, tags: string[]) => void;
   onCancel: () => void;
 }) {
-  const [tags, setTags] = useState<string[]>(initial);
+  const [notes, setNotes] = useState(initialNotes);
+  const [tags, setTags] = useState<string[]>(initialTags);
   return (
     <div className="space-y-2">
+      <label className="block">
+        <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Notes</div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="context — e.g. meal, workout, stress"
+          className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:border-ember focus:outline-none"
+        />
+      </label>
       <TagInput value={tags} onChange={setTags} suggestions={suggestions} />
       <div className="flex gap-2">
         <button
-          onClick={() => onSave(tags)}
+          onClick={() => onSave(notes, tags)}
           className="inline-flex items-center gap-1 rounded-md bg-ember px-2 py-1 text-xs font-medium text-ember-foreground"
         >
           <Check className="h-3 w-3" /> Save
@@ -190,5 +208,12 @@ function ElectrolyteRow({ row }: { row: ElectrolyteLog }) {
   if (row.potassiumMg !== null) parts.push(`K ${row.potassiumMg}`);
   if (row.magnesiumMg !== null) parts.push(`Mg ${row.magnesiumMg}`);
   if (row.calciumMg !== null) parts.push(`Ca ${row.calciumMg}`);
-  return <div className="font-mono text-sm tabular-nums">{parts.join(" · ")} <span className="text-xs text-muted-foreground">mg</span></div>;
+  return (
+    <div className="space-y-0.5">
+      <div className="font-mono text-sm tabular-nums">
+        {parts.join(" · ")} <span className="text-xs text-muted-foreground">mg</span>
+      </div>
+      {row.notes && <div className="text-xs text-muted-foreground">{row.notes}</div>}
+    </div>
+  );
 }

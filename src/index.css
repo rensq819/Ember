@@ -4,56 +4,81 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
-    --primary: 20 90% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 6% 10%;
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
-    --accent: 240 5% 96%;
-    --accent-foreground: 240 6% 10%;
-    --destructive: 0 72% 51%;
+    /* Paper (light) theme */
+    --background: 40 27% 93%;
+    --foreground: 31 13% 11%;
+    --card: 42 37% 95%;
+    --card-foreground: 31 13% 11%;
+    --primary: 16 42% 62%;
+    --primary-foreground: 31 13% 11%;
+    --secondary: 38 20% 88%;
+    --secondary-foreground: 31 13% 11%;
+    --muted: 38 20% 88%;
+    --muted-foreground: 31 10% 44%;
+    --accent: 38 20% 88%;
+    --accent-foreground: 31 13% 11%;
+    --destructive: 9 80% 56%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 20 90% 48%;
-    --ember: 20 90% 52%;
-    --ember-foreground: 0 0% 100%;
-    --radius: 0.75rem;
+    --border: 31 12% 82%;
+    --input: 31 12% 82%;
+    --ring: 16 42% 62%;
+    --ember: 16 42% 62%;
+    --ember-foreground: 31 13% 11%;
+    --radius: 1rem;
   }
 
   .dark {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 8% 7%;
-    --card-foreground: 0 0% 98%;
-    --primary: 20 90% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 6% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 6% 12%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 240 6% 12%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 63% 48%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 6% 16%;
-    --input: 240 6% 16%;
-    --ring: 20 90% 55%;
-    --ember: 20 95% 58%;
-    --ember-foreground: 0 0% 100%;
+    /* Dusk (dark) theme */
+    --background: 216 8% 10%;
+    --foreground: 38 23% 90%;
+    --card: 214 12% 16%;
+    --card-foreground: 38 23% 90%;
+    --primary: 16 42% 62%;
+    --primary-foreground: 31 13% 11%;
+    --secondary: 215 11% 19%;
+    --secondary-foreground: 38 23% 90%;
+    --muted: 215 11% 19%;
+    --muted-foreground: 38 12% 58%;
+    --accent: 215 11% 19%;
+    --accent-foreground: 38 23% 90%;
+    --destructive: 9 72% 48%;
+    --destructive-foreground: 38 23% 90%;
+    --border: 214 10% 22%;
+    --input: 214 10% 22%;
+    --ring: 16 42% 62%;
+    --ember: 16 42% 62%;
+    --ember-foreground: 31 13% 11%;
   }
 
   html, body, #root { height: 100%; }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-family: "Geist", "Inter", -apple-system, system-ui, sans-serif;
     overscroll-behavior-y: none;
   }
 
   * { @apply border-border; }
+}
+
+/* Ember flame animations */
+@keyframes ember-breath {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50%       { opacity: 0.95; transform: scale(1.04); }
+}
+@keyframes ember-pulse {
+  0%, 100% { opacity: 0.75; transform: scale(0.985); }
+  50%       { opacity: 1;    transform: scale(1.015); }
+}
+@keyframes ember-spark {
+  0%   { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(var(--spark-dx), var(--spark-dy)) scale(0.8); opacity: 0; }
+}
+@keyframes ember-confetti {
+  to { transform: translateY(900px) rotate(720deg); }
+}
+@keyframes ember-stage-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
