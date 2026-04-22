@@ -17,12 +17,56 @@ function localDateStr() {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
 }
 
+function formatCalDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+function CalSummaryCard({ eaten, budget, remaining, exercise, label }: {
+  eaten: number; budget: number; remaining: number; exercise: number; label: string;
+}) {
+  const over = remaining < 0;
+  return (
+    <div style={{ borderRadius: 20, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', padding: '16px 18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+        <div>
+          <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>{label}</div>
+          <div className="font-mono" style={{ fontSize: 32, letterSpacing: -1, color: 'hsl(var(--foreground))', fontFeatureSettings: '"tnum"', marginTop: 2 }}>
+            {eaten}<span style={{ fontSize: 14, color: 'hsl(var(--muted-foreground))' }}> cal</span>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>Budget</div>
+          <div className="font-mono" style={{ fontSize: 20, letterSpacing: -0.5, color: 'hsl(var(--foreground))', fontFeatureSettings: '"tnum"', marginTop: 2 }}>
+            {budget}
+          </div>
+        </div>
+      </div>
+      <div style={{ height: 5, background: 'hsl(var(--border))', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', borderRadius: 3,
+          background: over ? '#B97A63' : '#C89079',
+          width: `${Math.min(100, (eaten / Math.max(1, budget)) * 100)}%`,
+          transition: 'width 0.4s ease',
+        }} />
+      </div>
+      <div className="flex justify-between text-xs mt-2" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        <span>{exercise > 0 ? `+${exercise} burned` : ' '}</span>
+        <span style={{ color: over ? '#B97A63' : 'hsl(var(--muted-foreground))' }}>
+          {remaining >= 0 ? `${remaining} remaining` : `${Math.abs(remaining)} over`}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function FoodTab() {
   const { sync, syncing, error, lastSyncedAt } = useLoseItSync();
   const today = localDateStr();
-  const entries = useLiveQuery(() => db.foodLogEntries.where("date").equals(today).toArray(), [today]);
-  const summary = useLiveQuery(() => db.dailyCalories.get(today), [today]);
+  const todaySummary = useLiveQuery(() => db.dailyCalories.get(today), [today]);
+  const history = useLiveQuery(() => db.dailyCalories.orderBy("date").reverse().limit(60).toArray(), []);
   const minutesAgo = lastSyncedAt ? Math.floor((Date.now() - lastSyncedAt) / 60_000) : null;
+  const pastDays = history?.filter(r => r.date !== today) ?? [];
 
   return (
     <div className="space-y-4">
@@ -46,57 +90,57 @@ function FoodTab() {
         </div>
       )}
 
-      {summary && (
-        <div style={{ borderRadius: 20, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', padding: '16px 18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-            <div>
-              <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>Eaten today</div>
-              <div className="font-mono" style={{ fontSize: 32, letterSpacing: -1, color: 'hsl(var(--foreground))', fontFeatureSettings: '"tnum"', marginTop: 2 }}>
-                {summary.caloriesEaten}<span style={{ fontSize: 14, color: 'hsl(var(--muted-foreground))' }}> cal</span>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>Budget</div>
-              <div className="font-mono" style={{ fontSize: 20, letterSpacing: -0.5, color: 'hsl(var(--foreground))', fontFeatureSettings: '"tnum"', marginTop: 2 }}>
-                {summary.caloriesBudget}
-              </div>
-            </div>
-          </div>
-          <div style={{ height: 5, background: 'hsl(var(--border))', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 3,
-              background: summary.caloriesRemaining < 0 ? '#B97A63' : '#C89079',
-              width: `${Math.min(100, (summary.caloriesEaten / Math.max(1, summary.caloriesBudget)) * 100)}%`,
-              transition: 'width 0.4s ease',
-            }} />
-          </div>
-          <div className="flex justify-between text-xs mt-2" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            <span>{summary.exerciseCalories > 0 ? `+${summary.exerciseCalories} burned` : '\u00a0'}</span>
-            <span style={{ color: summary.caloriesRemaining < 0 ? '#B97A63' : 'hsl(var(--muted-foreground))' }}>
-              {summary.caloriesRemaining >= 0 ? `${summary.caloriesRemaining} remaining` : `${Math.abs(summary.caloriesRemaining)} over`}
-            </span>
-          </div>
+      {todaySummary ? (
+        <CalSummaryCard
+          label="Eaten today"
+          eaten={todaySummary.caloriesEaten}
+          budget={todaySummary.caloriesBudget}
+          remaining={todaySummary.caloriesRemaining}
+          exercise={todaySummary.exerciseCalories}
+        />
+      ) : !syncing && (
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <div className="font-display" style={{ fontSize: 20, color: 'hsl(var(--muted-foreground))' }}>No data yet.</div>
+          <div className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Tap Sync to pull from LoseIt</div>
         </div>
       )}
 
-      {entries && entries.length > 0 ? (
-        <div style={{ borderRadius: 18, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', overflow: 'hidden' }}>
-          {entries.map((e, i) => (
-            <div key={e.id} style={{
-              padding: '12px 16px',
-              borderBottom: i < entries.length - 1 ? '1px solid hsl(var(--border))' : 'none',
-            }}>
-              <div style={{ fontSize: 14, color: 'hsl(var(--foreground))' }}>{e.name}</div>
-              {e.brand && <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>{e.brand}</div>}
-            </div>
-          ))}
+      {pastDays.length > 0 && (
+        <div style={{ paddingTop: 4 }}>
+          <div className="text-xs font-semibold tracking-[1.6px] uppercase mb-2.5" style={{ color: 'hsl(var(--muted-foreground))' }}>History</div>
+          <div style={{ borderRadius: 18, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', overflow: 'hidden' }}>
+            {pastDays.map((r, i) => {
+              const over = r.caloriesRemaining < 0;
+              const pct = Math.min(100, (r.caloriesEaten / Math.max(1, r.caloriesBudget)) * 100);
+              return (
+                <div key={r.date} style={{
+                  padding: '12px 16px',
+                  borderBottom: i < pastDays.length - 1 ? '1px solid hsl(var(--border))' : 'none',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                    <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{formatCalDate(r.date)}</span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      {r.exerciseCalories > 0 && (
+                        <span className="font-mono text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>+{r.exerciseCalories}</span>
+                      )}
+                      <span className="font-mono" style={{ fontSize: 15, color: 'hsl(var(--foreground))', fontFeatureSettings: '"tnum"' }}>
+                        {r.caloriesEaten}
+                        <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>/{r.caloriesBudget}</span>
+                      </span>
+                      <span className="text-xs font-mono" style={{ color: over ? '#B97A63' : '#A5B77A', minWidth: 44, textAlign: 'right', fontFeatureSettings: '"tnum"' }}>
+                        {over ? `+${Math.abs(r.caloriesRemaining)}` : `-${r.caloriesRemaining}`}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ height: 3, background: 'hsl(var(--border))', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: over ? '#B97A63' : '#C89079', borderRadius: 2 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      ) : entries !== undefined && !syncing ? (
-        <div style={{ textAlign: 'center', padding: '32px 0' }}>
-          <div className="font-display" style={{ fontSize: 20, color: 'hsl(var(--muted-foreground))' }}>Nothing logged yet.</div>
-          <div className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Tap Sync to pull from LoseIt</div>
-        </div>
-      ) : null}
+      )}
     </div>
   );
 }

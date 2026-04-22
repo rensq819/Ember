@@ -21,7 +21,7 @@ export function SettingsRoute() {
   // LoseIt
   const [liEmail, setLiEmail] = useState("");
   const [liPassword, setLiPassword] = useState("");
-  const [liTimezone, setLiTimezone] = useState("America/Chicago");
+  const [liTimezone, setLiTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [liConnecting, setLiConnecting] = useState(false);
   const [liStatus, setLiStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [liAuthenticated, setLiAuthenticated] = useState<boolean | null>(null);
