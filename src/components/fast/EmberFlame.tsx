@@ -94,7 +94,7 @@ export function EmberFlame({ stageKey, progress, size = 260, isDark = true }: Em
   );
 }
 
-function EmberSparks({ color, size, breathDur }: { color: string; size: number; breathDur: number }) {
+function EmberSparks({ color, size: _size, breathDur }: { color: string; size: number; breathDur: number }) {
   const sparks = useMemo(() =>
     Array.from({ length: 6 }).map((_, i) => {
       const angle = (Math.PI * 2 * i) / 6 + Math.random() * 0.8;

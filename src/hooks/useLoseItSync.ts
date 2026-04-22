@@ -56,11 +56,9 @@ export function useLoseItSync() {
       console.error("[loseit] sync error:", e);
       const msg = e instanceof Error ? e.message : "Sync failed";
       const friendlyMsg =
-        msg.includes("Failed to fetch") || msg.includes("NetworkError")
-          ? "Proxy not running. Start it with: node scripts/loseit-proxy.js"
-          : msg.includes("Not authenticated")
-            ? "Not connected to LoseIt. Add credentials in Settings."
-            : msg;
+        msg.includes("Missing credentials") || msg.includes("Not authenticated")
+          ? "Not connected to LoseIt. Add credentials in Settings."
+          : msg;
       setError(friendlyMsg);
     } finally {
       setSyncing(false);

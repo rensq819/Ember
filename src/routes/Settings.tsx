@@ -3,7 +3,7 @@ import { Plug } from "lucide-react";
 import { DEFAULT_SETTINGS, db, getSettings } from "@/db";
 import type { GlucoseUnit, UserSettings } from "@/db/types";
 import { extractHashtagsFromNotes, type CleanupResult } from "@/lib/data-maintenance";
-import { loseItAuth, loseItHealth } from "@/lib/loseit";
+import { loseItAuth, getStoredCreds, storeCreds } from "@/lib/loseit";
 
 export function SettingsRoute() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
@@ -29,9 +29,14 @@ export function SettingsRoute() {
       setSettings(s);
       if (s.loseIt) { setLiEmail(s.loseIt.email); setLiTimezone(s.loseIt.timezone); }
     });
-    loseItHealth()
-      .then((h) => { setLiAuthenticated(h.authenticated); setLiUsername(h.username); })
-      .catch(() => setLiAuthenticated(false));
+    const creds = getStoredCreds();
+    if (creds) {
+      setLiAuthenticated(true);
+      setLiUsername(creds.username ?? null);
+      setLiEmail(creds.email);
+    } else {
+      setLiAuthenticated(false);
+    }
   }, []);
 
   function applyTheme(t: 'dark' | 'light') {
@@ -55,6 +60,7 @@ export function SettingsRoute() {
     setLiStatus(null);
     try {
       const result = await loseItAuth(liEmail, liPassword, liTimezone);
+      storeCreds(liEmail, liPassword, result.username);
       setLiAuthenticated(true);
       setLiUsername(result.username);
       setLiStatus({ ok: true, message: `Connected as ${result.username}` });
@@ -63,12 +69,7 @@ export function SettingsRoute() {
       await db.userSettings.put(next);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Connection failed";
-      setLiStatus({
-        ok: false,
-        message: msg.includes("Failed to fetch")
-          ? "Proxy not running — start with: node scripts/loseit-proxy.js"
-          : msg,
-      });
+      setLiStatus({ ok: false, message: msg });
     } finally {
       setLiConnecting(false);
     }
@@ -224,8 +225,7 @@ export function SettingsRoute() {
           }}>{liStatus.message}</div>
         )}
         <p className="text-xs mt-2.5" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.5 }}>
-          Credentials go to the local proxy only. Start with:{' '}
-          <span className="font-mono">node scripts/loseit-proxy.js</span>
+          Credentials are stored only in your browser and never sent to any server except LoseIt.
         </p>
       </SettingsSection>
 

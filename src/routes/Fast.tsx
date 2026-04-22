@@ -76,7 +76,6 @@ export function FastRoute() {
   const hoursToNext = nextMinHours !== null ? Math.max(0, nextMinHours - elapsedHours) : 0;
 
   const stageColor = getStageColor(stageKey);
-  const stageCopy = STAGE_COPY[stageKey];
 
   const latestFastGki = useMemo(() => {
     for (let i = metabolicInWindow.length - 1; i >= 0; i--) {
@@ -99,10 +98,10 @@ export function FastRoute() {
   // Celebrate on stage transitions
   const prevStageRef = useRef({ key: stageKey });
   useEffect(() => {
-    if (active && prevStageRef.key !== stageKey && stageKey !== 'fed') {
+    if (active && prevStageRef.current.key !== stageKey && stageKey !== 'fed') {
       setShowCelebration(stageKey);
     }
-    prevStageRef.key = stageKey;
+    prevStageRef.current.key = stageKey;
   }, [stageKey, active]);
 
   useEffect(() => {
@@ -156,12 +155,6 @@ export function FastRoute() {
     await db.fastingSessions.update(active.id, { startedAt: nextStartedAt });
     setStartTimeError(null);
     setEditingStartTime(false);
-  }
-
-  async function deleteHistoryFast(id?: number) {
-    if (!id) return;
-    if (!window.confirm("Delete this fast from history?")) return;
-    await db.fastingSessions.delete(id);
   }
 
   const stageHeadline: Record<string, React.ReactNode> = {
@@ -408,7 +401,7 @@ export function FastRoute() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function FactCard({ eyebrow, title, caption, accentColor, mono = false, isDark }: {
+function FactCard({ eyebrow, title, caption, accentColor, mono = false, isDark: _isDark }: {
   eyebrow: string; title: string; caption: string; accentColor: string; mono?: boolean; isDark: boolean;
 }) {
   return (
@@ -426,7 +419,7 @@ function FactCard({ eyebrow, title, caption, accentColor, mono = false, isDark }
   );
 }
 
-function MetabolicStrip({ glu, ket, isDark }: { glu: number | null; ket: number | null; isDark: boolean }) {
+function MetabolicStrip({ glu, ket, isDark: _isDark }: { glu: number | null; ket: number | null; isDark: boolean }) {
   return (
     <div style={{
       borderRadius: 20, border: '1px solid hsl(var(--border))',
@@ -456,7 +449,7 @@ function ReadingBit({ label, value, unit, color, align }: { label: string; value
   );
 }
 
-function StageLearnCard({ stageKey, open, onToggle, isDark }: { stageKey: string; open: boolean; onToggle: () => void; isDark: boolean }) {
+function StageLearnCard({ stageKey, open, onToggle, isDark: _isDark }: { stageKey: string; open: boolean; onToggle: () => void; isDark: boolean }) {
   const sc = getStageColor(stageKey);
   const copy = STAGE_COPY[stageKey];
   return (
@@ -509,7 +502,7 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
   );
 }
 
-function SmallIconBtn({ label, onClick, children, isDark }: { label: string; onClick: () => void; children: React.ReactNode; isDark: boolean }) {
+function SmallIconBtn({ label, onClick, children, isDark: _isDark }: { label: string; onClick: () => void; children: React.ReactNode; isDark: boolean }) {
   return (
     <button aria-label={label} onClick={onClick} style={{
       width: 52, height: 52, borderRadius: 16,
@@ -522,10 +515,12 @@ function SmallIconBtn({ label, onClick, children, isDark }: { label: string; onC
 
 function StageCelebration({ stageKey, onDismiss }: { stageKey: string; onDismiss: () => void }) {
   const sc = getStageColor(stageKey);
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
   useEffect(() => {
-    const t = setTimeout(onDismiss, 3000);
+    const t = setTimeout(() => onDismissRef.current(), 3000);
     return () => clearTimeout(t);
-  }, [onDismiss]);
+  }, []);
   const confetti = useMemo(() => Array.from({ length: 18 }).map((_, i) => ({
     id: i,
     x: Math.random() * 100,

@@ -1,4 +1,22 @@
-const PROXY = "http://127.0.0.1:4242";
+const PROXY = "/api/loseit";
+const CREDS_KEY = "loseit-credentials";
+
+export interface StoredCreds { email: string; password: string; username?: string }
+
+export function storeCreds(email: string, password: string, username?: string) {
+  localStorage.setItem(CREDS_KEY, JSON.stringify({ email, password, username }));
+}
+
+export function clearCreds() {
+  localStorage.removeItem(CREDS_KEY);
+}
+
+export function getStoredCreds(): StoredCreds | null {
+  try {
+    const raw = localStorage.getItem(CREDS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 export interface ProxyHealth {
   ok: boolean;
@@ -20,9 +38,14 @@ export interface DailySummaryResult {
 }
 
 async function call<T>(path: string, options?: RequestInit): Promise<T> {
+  const creds = getStoredCreds();
+  const credHeaders: Record<string, string> = creds
+    ? { "X-LoseIt-Email": creds.email, "X-LoseIt-Password": creds.password }
+    : {};
+
   const res = await fetch(`${PROXY}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers: { "Content-Type": "application/json", ...credHeaders, ...options?.headers },
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await res.json() as any;
