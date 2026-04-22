@@ -6,7 +6,7 @@ const GWT_SERVICE_CLASS = "com.loseit.core.client.service.LoseItRemoteService";
 export const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-LoseIt-Email, X-LoseIt-Password",
+  "Access-Control-Allow-Headers": "Content-Type, X-LoseIt-Email, X-LoseIt-Password, X-LoseIt-Session",
 };
 
 export function setcors(res) {
@@ -18,6 +18,25 @@ export function getCredentials(req) {
   const password = req.headers["x-loseit-password"];
   if (!email || !password) throw new Error("Missing credentials — connect LoseIt in Settings.");
   return { email, password };
+}
+
+// Decode a cached LoseIt session from the X-LoseIt-Session header.
+export function resolveSession(req) {
+  const header = req.headers["x-loseit-session"];
+  if (!header) return null;
+  try {
+    const data = JSON.parse(Buffer.from(header, "base64").toString("utf-8"));
+    if (data.cookies && data.userId && data.username) return data;
+  } catch {}
+  return null;
+}
+
+// Use a cached session if the client sent one, otherwise do a fresh login.
+export async function getOrCreateSession(req) {
+  const cached = resolveSession(req);
+  if (cached) return cached;
+  const { email, password } = getCredentials(req);
+  return loginToLoseIt(email, password);
 }
 
 export async function loginToLoseIt(email, password) {
