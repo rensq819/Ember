@@ -67,7 +67,7 @@ function FoodTab() {
   const todaySummary = useLiveQuery(() => db.dailyCalories.get(today), [today]);
   const history = useLiveQuery(() => db.dailyCalories.orderBy("date").reverse().limit(90).toArray(), []);
   const minutesAgo = lastSyncedAt ? Math.floor((Date.now() - lastSyncedAt) / 60_000) : null;
-  const pastDays = history?.filter(r => r.date !== today) ?? [];
+  const pastDays = history?.filter(r => r.date < today) ?? [];
 
   // Auto-sync once when history is loaded but empty and creds exist
   const autoSyncFired = useRef(false);

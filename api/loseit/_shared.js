@@ -204,12 +204,15 @@ function parseDailySummaries(gwt) {
     seen.add(d);
     const tdee = v[i + 6], budget = v[i + 9], eaten = v[i + 11], exercise = v[i + 13];
     if (typeof tdee !== "number" || typeof eaten !== "number") continue;
+    const baseBudget = Math.round(typeof budget === "number" ? budget : tdee);
+    const exerciseCal = Math.round(typeof exercise === "number" ? exercise : 0);
+    const effectiveBudget = baseBudget + exerciseCal;
     entries.push({
       date: dayToDateStr(d), dayNumber: d,
-      caloriesBudget: Math.round(typeof budget === "number" ? budget : tdee),
+      caloriesBudget: effectiveBudget,
       caloriesEaten: Math.round(eaten),
-      caloriesRemaining: Math.round((typeof budget === "number" ? budget : tdee) - eaten),
-      exerciseCalories: Math.round(typeof exercise === "number" ? exercise : 0),
+      caloriesRemaining: effectiveBudget - Math.round(eaten),
+      exerciseCalories: exerciseCal,
     });
   }
   entries.sort((a, b) => a.dayNumber - b.dayNumber);
