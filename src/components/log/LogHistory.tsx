@@ -9,6 +9,8 @@ import { useSettings } from "@/hooks/useLogs";
 import { useRecentTags } from "@/hooks/useTags";
 import { TagInput } from "@/components/log/TagInput";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { deleteMetabolicLog, deleteElectrolyteLog, patchMetabolicLog, patchElectrolyteLog } from "@/lib/sync";
 
 type Entry =
   | { kind: "metabolic"; ts: number; row: MetabolicLog }
@@ -28,6 +30,7 @@ const ZONE_COLOR: Record<string, string> = {
 };
 
 export function LogHistory({ metabolic, electrolyte }: Props) {
+  const { user } = useAuth();
   const settings = useSettings();
   const suggestions = useRecentTags(24);
   const [editing, setEditing] = useState<string | null>(null);
@@ -48,8 +51,13 @@ export function LogHistory({ metabolic, electrolyte }: Props) {
     if (!window.confirm("Delete this entry?")) return;
     const id = entry.row.id;
     if (id === undefined) return;
-    if (entry.kind === "metabolic") await db.metabolicLogs.delete(id);
-    else await db.electrolyteLogs.delete(id);
+    if (entry.kind === "metabolic") {
+      await db.metabolicLogs.delete(id);
+      if (user && entry.row.uuid) deleteMetabolicLog(entry.row.uuid).catch(console.error);
+    } else {
+      await db.electrolyteLogs.delete(id);
+      if (user && entry.row.uuid) deleteElectrolyteLog(entry.row.uuid).catch(console.error);
+    }
   }
 
   async function saveEntryEdits(entry: Entry, notes: string, tags: string[]) {
@@ -60,8 +68,13 @@ export function LogHistory({ metabolic, electrolyte }: Props) {
       notes: trimmedNotes.length > 0 ? trimmedNotes : undefined,
       tags: tags.length > 0 ? tags : undefined,
     };
-    if (entry.kind === "metabolic") await db.metabolicLogs.update(id, patch);
-    else await db.electrolyteLogs.update(id, patch);
+    if (entry.kind === "metabolic") {
+      await db.metabolicLogs.update(id, patch);
+      if (user && entry.row.uuid) patchMetabolicLog(entry.row.uuid, patch.notes, patch.tags).catch(console.error);
+    } else {
+      await db.electrolyteLogs.update(id, patch);
+      if (user && entry.row.uuid) patchElectrolyteLog(entry.row.uuid, patch.notes, patch.tags).catch(console.error);
+    }
     setEditing(null);
   }
 

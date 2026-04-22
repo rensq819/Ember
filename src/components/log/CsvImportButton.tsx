@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { importMetabolicCsv, type ImportResult } from "@/lib/csv-import";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function CsvImportButton() {
+  const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export function CsvImportButton() {
     setResult(null);
     try {
       const text = await file.text();
-      const r = await importMetabolicCsv(text);
+      const r = await importMetabolicCsv(text, user?.id);
       setResult(r);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");

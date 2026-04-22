@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { Plug } from "lucide-react";
+import { LogOut, Plug } from "lucide-react";
 import { DEFAULT_SETTINGS, db, getSettings } from "@/db";
 import type { GlucoseUnit, UserSettings } from "@/db/types";
 import { extractHashtagsFromNotes, type CleanupResult } from "@/lib/data-maintenance";
 import { loseItAuth, getStoredCreds, storeCreds } from "@/lib/loseit";
+import { useAuth } from "@/contexts/AuthContext";
+import { upsertSettings } from "@/lib/sync";
 
 export function SettingsRoute() {
+  const { user, signOut } = useAuth();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [cleanup, setCleanup] = useState<CleanupResult | null>(null);
   const [cleaning, setCleaning] = useState(false);
@@ -54,6 +57,7 @@ export function SettingsRoute() {
     const next = { ...settings, glucoseUnit: unit };
     setSettings(next);
     await db.userSettings.put(next);
+    if (user) upsertSettings(user.id, next).catch(console.error);
   }
 
   async function connectLoseIt() {
@@ -68,6 +72,7 @@ export function SettingsRoute() {
       const next = { ...settings, loseIt: { email: liEmail, timezone: liTimezone } };
       setSettings(next);
       await db.userSettings.put(next);
+      if (user) upsertSettings(user.id, next).catch(console.error);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Connection failed";
       setLiStatus({ ok: false, message: msg });
@@ -105,7 +110,7 @@ export function SettingsRoute() {
           Your <em style={{ fontStyle: 'italic', color: '#8A7FA8' }}>ember,</em><br />your way.
         </h1>
         <p className="text-sm mt-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          Local-only. Nothing leaves this device.
+          Your data lives in the cloud — private, backed up, yours.
         </p>
       </div>
 
@@ -276,7 +281,7 @@ export function SettingsRoute() {
       </SettingsSection>
 
       {/* Footer */}
-      <div style={{ padding: '36px 24px 24px', textAlign: 'center' }}>
+      <div style={{ padding: '36px 24px 32px', textAlign: 'center' }}>
         <div style={{
           width: 28, height: 28, borderRadius: 8, background: '#C89079',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -284,6 +289,26 @@ export function SettingsRoute() {
         }}>e</div>
         <div className="font-display mt-2.5" style={{ fontSize: 18, letterSpacing: -0.3 }}>Ember</div>
         <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Fast well. Measure quietly.</div>
+        {user && (
+          <>
+            <div className="text-xs mt-3" style={{ color: 'hsl(var(--muted-foreground))', opacity: 0.6 }}>
+              {user.email}
+            </div>
+            <button
+              onClick={signOut}
+              style={{
+                marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: 999,
+                border: '1px solid hsl(var(--border))',
+                background: 'transparent', color: 'hsl(var(--muted-foreground))',
+                fontSize: 12, cursor: 'pointer',
+                fontFamily: '"Geist", system-ui, sans-serif',
+              }}
+            >
+              <LogOut size={12} /> Sign out
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

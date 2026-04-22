@@ -8,6 +8,9 @@ import type {
   UserSettings,
 } from "./types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyRow = Record<string, any>;
+
 export const db = new Dexie("ember") as Dexie & {
   fastingSessions: EntityTable<FastingSession, "id">;
   metabolicLogs: EntityTable<MetabolicLog, "id">;
@@ -45,6 +48,25 @@ db.version(4).stores({
   userSettings: "id",
   foodLogEntries: "++id, date",
   dailyCalories: "date",
+});
+
+db.version(5).stores({
+  fastingSessions: "++id, startedAt, endedAt, protocol, uuid",
+  metabolicLogs: "++id, timestamp, sourceId, *tags, uuid",
+  electrolyteLogs: "++id, timestamp, *tags, uuid",
+  userSettings: "id",
+  foodLogEntries: "++id, date",
+  dailyCalories: "date",
+}).upgrade(async tx => {
+  await tx.table("fastingSessions").toCollection().modify((row: AnyRow) => {
+    if (!row.uuid) row.uuid = crypto.randomUUID();
+  });
+  await tx.table("metabolicLogs").toCollection().modify((row: AnyRow) => {
+    if (!row.uuid) row.uuid = crypto.randomUUID();
+  });
+  await tx.table("electrolyteLogs").toCollection().modify((row: AnyRow) => {
+    if (!row.uuid) row.uuid = crypto.randomUUID();
+  });
 });
 
 export const DEFAULT_SETTINGS: UserSettings = {

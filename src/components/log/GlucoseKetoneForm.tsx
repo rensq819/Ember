@@ -8,6 +8,8 @@ import { useSettings } from "@/hooks/useLogs";
 import { useRecentTags } from "@/hooks/useTags";
 import { TagInput } from "@/components/log/TagInput";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { syncMetabolicLog } from "@/lib/sync";
 
 const ZONE_COLOR: Record<string, string> = {
   therapeutic: "text-emerald-400",
@@ -18,6 +20,7 @@ const ZONE_COLOR: Record<string, string> = {
 };
 
 export function GlucoseKetoneForm() {
+  const { user } = useAuth();
   const settings = useSettings();
   const active = useActiveFast();
   const now = useNow(60_000);
@@ -47,14 +50,18 @@ export function GlucoseKetoneForm() {
 
   async function save() {
     if (glucoseMmol === null && ketonesMmol === null) return;
-    await db.metabolicLogs.add({
+    const uuid = crypto.randomUUID();
+    const log = {
+      uuid,
       timestamp: Date.now(),
       glucoseMmol,
       ketonesMmol,
       gki,
       notes: notes.trim() || undefined,
       tags: tags.length > 0 ? tags : undefined,
-    });
+    };
+    await db.metabolicLogs.add(log);
+    if (user) syncMetabolicLog(user.id, log).catch(console.error);
     setGlucose("");
     setKetones("");
     setNotes("");
