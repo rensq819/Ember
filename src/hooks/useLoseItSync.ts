@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { db } from "@/db";
-import { loseItDailySummary, loseItFoodLog, getStoredCreds } from "@/lib/loseit";
+import { loseItSync, getStoredCreds } from "@/lib/loseit";
 
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const LAST_SYNC_KEY = "loseit-last-sync";
@@ -23,10 +23,7 @@ export function useLoseItSync() {
     setError(null);
 
     try {
-      const [foodData, summaryData] = await Promise.all([
-        loseItFoodLog(date),
-        loseItDailySummary(date),
-      ]);
+      const { foodLog: foodData, dailySummary: summaryData } = await loseItSync(date);
 
       const syncedAt = Date.now();
 
@@ -47,7 +44,9 @@ export function useLoseItSync() {
           );
         }
 
-        await db.dailyCalories.put({ ...summaryData, syncedAt });
+        if (summaryData) {
+          await db.dailyCalories.put({ ...summaryData, syncedAt });
+        }
       });
 
       localStorage.setItem(LAST_SYNC_KEY, String(syncedAt));

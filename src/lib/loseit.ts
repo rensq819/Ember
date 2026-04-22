@@ -68,12 +68,11 @@ export function loseItAuth(
   });
 }
 
-export function loseItFoodLog(date?: string): Promise<FoodLogResult> {
-  return call<FoodLogResult>(`/food-log${date ? `?date=${date}` : ""}`);
+export interface SyncResult {
+  foodLog: FoodLogResult;
+  dailySummary: DailySummaryResult | null;
 }
 
-export function loseItDailySummary(date?: string): Promise<DailySummaryResult> {
-  return call<DailySummaryResult>(
-    `/daily-summary${date ? `?date=${date}` : ""}`
-  );
+export function loseItSync(date?: string): Promise<SyncResult> {
+  return call<SyncResult>(`/sync${date ? `?date=${date}` : ""}`);
 }

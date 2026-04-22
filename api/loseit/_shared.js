@@ -28,9 +28,11 @@ export async function loginToLoseIt(email, password) {
     body: body.toString(),
   });
 
+  if (res.status === 429) {
+    throw new Error("LoseIt is rate-limiting sign-ins. Wait a minute and try again.");
+  }
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`LoseIt login failed (${res.status}): ${text.slice(0, 100)}`);
+    throw new Error(`LoseIt login failed (${res.status}).`);
   }
 
   const data = await res.json();
