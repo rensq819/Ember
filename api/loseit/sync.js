@@ -1,4 +1,4 @@
-import { setcors, getOrCreateSession, gwtRpc, extractFoodLog, extractDailySummary, dateToDayNumber } from "./_shared.js";
+import { setcors, getOrCreateSession, gwtRpc, extractFoodLog, extractDailySummary, extractAllDailySummaries, dateToDayNumber } from "./_shared.js";
 
 export default async function handler(req, res) {
   setcors(res);
@@ -21,6 +21,7 @@ export default async function handler(req, res) {
     res.status(200).json({
       foodLog: extractFoodLog(initGwt, dayNum),
       dailySummary: extractDailySummary(goalsGwt, dayNum),
+      dailySummaries: extractAllDailySummaries(goalsGwt),
     });
   } catch (e) {
     res.status(500).json({ error: e.message });

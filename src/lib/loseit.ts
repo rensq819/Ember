@@ -105,6 +105,7 @@ export async function loseItAuth(
 export interface SyncResult {
   foodLog: FoodLogResult;
   dailySummary: DailySummaryResult | null;
+  dailySummaries: DailySummaryResult[];
 }
 
 export function loseItSync(date?: string): Promise<SyncResult> {

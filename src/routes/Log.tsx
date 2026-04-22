@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { GlucoseKetoneForm } from "@/components/log/GlucoseKetoneForm";
@@ -7,6 +7,7 @@ import { LogHistory } from "@/components/log/LogHistory";
 import { CsvImportButton } from "@/components/log/CsvImportButton";
 import { useElectrolyteLogs, useMetabolicLogs } from "@/hooks/useLogs";
 import { useLoseItSync } from "@/hooks/useLoseItSync";
+import { getStoredCreds } from "@/lib/loseit";
 import { db } from "@/db";
 import { cn } from "@/lib/utils";
 
@@ -64,9 +65,22 @@ function FoodTab() {
   const { sync, syncing, error, lastSyncedAt } = useLoseItSync();
   const today = localDateStr();
   const todaySummary = useLiveQuery(() => db.dailyCalories.get(today), [today]);
-  const history = useLiveQuery(() => db.dailyCalories.orderBy("date").reverse().limit(60).toArray(), []);
+  const history = useLiveQuery(() => db.dailyCalories.orderBy("date").reverse().limit(90).toArray(), []);
   const minutesAgo = lastSyncedAt ? Math.floor((Date.now() - lastSyncedAt) / 60_000) : null;
   const pastDays = history?.filter(r => r.date !== today) ?? [];
+
+  // Auto-sync once when history is loaded but empty and creds exist
+  const autoSyncFired = useRef(false);
+  useEffect(() => {
+    if (autoSyncFired.current) return;
+    if (history === undefined) return; // still loading
+    if (history.length > 0) { autoSyncFired.current = true; return; }
+    if (!getStoredCreds()) return;
+    autoSyncFired.current = true;
+    sync();
+  }, [history, sync]);
+
+  const historyLoaded = history !== undefined;
 
   return (
     <div className="space-y-4">
@@ -98,7 +112,12 @@ function FoodTab() {
           remaining={todaySummary.caloriesRemaining}
           exercise={todaySummary.exerciseCalories}
         />
-      ) : !syncing && (
+      ) : syncing ? (
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" style={{ color: 'hsl(var(--muted-foreground))' }} />
+          <div className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Pulling history from LoseIt…</div>
+        </div>
+      ) : historyLoaded && (
         <div style={{ textAlign: 'center', padding: '32px 0' }}>
           <div className="font-display" style={{ fontSize: 20, color: 'hsl(var(--muted-foreground))' }}>No data yet.</div>
           <div className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Tap Sync to pull from LoseIt</div>
@@ -138,6 +157,17 @@ function FoodTab() {
                 </div>
               );
             })}
+          </div>
+          <div className="text-xs mt-3 text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            Showing {pastDays.length} day{pastDays.length !== 1 ? 's' : ''} of history
+            {!syncing && (
+              <button
+                onClick={() => sync()}
+                style={{ marginLeft: 8, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'hsl(var(--muted-foreground))' }}
+              >
+                Sync more
+              </button>
+            )}
           </div>
         </div>
       )}

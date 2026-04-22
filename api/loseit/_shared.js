@@ -191,7 +191,7 @@ export function extractFoodLog(gwt, targetDay) {
   return { date: dayToDateStr(targetDay), entries };
 }
 
-export function extractDailySummary(gwt, targetDay) {
+function parseDailySummaries(gwt) {
   const { values: v } = gwt;
   const entries = [], seen = new Set();
   for (let i = 1; i < v.length - 16; i++) {
@@ -213,5 +213,14 @@ export function extractDailySummary(gwt, targetDay) {
     });
   }
   entries.sort((a, b) => a.dayNumber - b.dayNumber);
+  return entries;
+}
+
+export function extractAllDailySummaries(gwt) {
+  return parseDailySummaries(gwt);
+}
+
+export function extractDailySummary(gwt, targetDay) {
+  const entries = parseDailySummaries(gwt);
   return entries.find(e => e.dayNumber === targetDay) ?? entries.at(-1) ?? null;
 }
