@@ -95,13 +95,19 @@ export function FastRoute() {
     return { glu: null, ket: null };
   }, [metabolicInWindow]);
 
-  // Celebrate on stage transitions
-  const prevStageRef = useRef({ key: stageKey });
+  // Celebrate on stage transitions.
+  // prevStageRef starts null so that on remount (tab switch) we initialise to
+  // the current stage without mistaking the async data-load as a transition.
+  const prevStageRef = useRef<string | null>(null);
   useEffect(() => {
-    if (active && prevStageRef.current.key !== stageKey && stageKey !== 'fed') {
+    if (!active) {
+      prevStageRef.current = null;
+      return;
+    }
+    if (prevStageRef.current !== null && prevStageRef.current !== stageKey && stageKey !== 'fed') {
       setShowCelebration(stageKey);
     }
-    prevStageRef.current.key = stageKey;
+    prevStageRef.current = stageKey;
   }, [stageKey, active]);
 
   useEffect(() => {
