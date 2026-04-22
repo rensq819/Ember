@@ -5,6 +5,11 @@ import { loseItSync, getStoredCreds } from "@/lib/loseit";
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const LAST_SYNC_KEY = "loseit-last-sync";
 
+function localDateStr(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+}
+
 // Module-level flag so auto-sync fires at most once per page load.
 let autoSyncTriggered = false;
 
@@ -23,7 +28,10 @@ export function useLoseItSync() {
     setError(null);
 
     try {
-      const { foodLog: foodData, dailySummary: summaryData } = await loseItSync(date);
+      // Always use the browser's local date so the server queries the right LoseIt
+      // day number and stores data under the date the UI queries for.
+      const targetDate = date ?? localDateStr();
+      const { foodLog: foodData, dailySummary: summaryData } = await loseItSync(targetDate);
 
       const syncedAt = Date.now();
 
