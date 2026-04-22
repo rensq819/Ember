@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { db } from "@/db";
-import { loseItDailySummary, loseItFoodLog } from "@/lib/loseit";
+import { loseItDailySummary, loseItFoodLog, getStoredCreds } from "@/lib/loseit";
 
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const LAST_SYNC_KEY = "loseit-last-sync";
@@ -67,9 +67,12 @@ export function useLoseItSync() {
 
   syncRef.current = sync;
 
-  // Auto-sync on app open (once per page load, respects 5-min cooldown)
+  // Auto-sync on app open (once per page load, respects 5-min cooldown).
+  // Don't mark as triggered when no creds exist — so it retries after the user authenticates.
   useEffect(() => {
     if (autoSyncTriggered) return;
+    if (!getStoredCreds()) return;
+
     autoSyncTriggered = true;
 
     const lastSync = parseInt(localStorage.getItem(LAST_SYNC_KEY) ?? "0", 10);

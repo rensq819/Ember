@@ -34,6 +34,7 @@ export function SettingsRoute() {
       setLiAuthenticated(true);
       setLiUsername(creds.username ?? null);
       setLiEmail(creds.email);
+      setLiPassword(creds.password);
     } else {
       setLiAuthenticated(false);
     }
