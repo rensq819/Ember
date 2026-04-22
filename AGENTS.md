@@ -8,6 +8,10 @@ Working notes for anyone (human or agent) picking up this project.
 
 Source of truth for scope: [Notion plan](https://www.notion.so/34209f752aab814c8432e993f676452c).
 
+## Git workflow
+
+**Always work directly on `main`.** Commit and push to `main` — no feature branches.
+
 ## Commands
 
 Run from `C:\Workplace`.
