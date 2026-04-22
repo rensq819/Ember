@@ -10,6 +10,7 @@ export type FastingProtocol =
 
 export interface FastingSession {
   id?: number;
+  uuid?: string;
   startedAt: number;
   endedAt: number | null;
   targetHours: number | null;
@@ -19,6 +20,7 @@ export interface FastingSession {
 
 export interface MetabolicLog {
   id?: number;
+  uuid?: string;
   timestamp: number;
   glucoseMmol: number | null;
   ketonesMmol: number | null;
@@ -30,6 +32,7 @@ export interface MetabolicLog {
 
 export interface ElectrolyteLog {
   id?: number;
+  uuid?: string;
   timestamp: number;
   sodiumMg: number | null;
   magnesiumMg: number | null;

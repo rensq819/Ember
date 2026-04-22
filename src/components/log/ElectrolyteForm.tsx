@@ -5,10 +5,13 @@ import { ELECTROLYTE_TARGETS } from "@/lib/electrolytes";
 import { useRecentTags } from "@/hooks/useTags";
 import { TagInput } from "@/components/log/TagInput";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { syncElectrolyteLog } from "@/lib/sync";
 
 type Values = Record<string, string>;
 
 export function ElectrolyteForm() {
+  const { user } = useAuth();
   const [values, setValues] = useState<Values>({});
   const [tags, setTags] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
@@ -25,14 +28,18 @@ export function ElectrolyteForm() {
     const magnesium = parseField("magnesium");
     const calcium = parseField("calcium");
     if (sodium === null && potassium === null && magnesium === null && calcium === null) return;
-    await db.electrolyteLogs.add({
+    const uuid = crypto.randomUUID();
+    const log = {
+      uuid,
       timestamp: Date.now(),
       sodiumMg: sodium,
       potassiumMg: potassium,
       magnesiumMg: magnesium,
       calciumMg: calcium,
       tags: tags.length > 0 ? tags : undefined,
-    });
+    };
+    await db.electrolyteLogs.add(log);
+    if (user) syncElectrolyteLog(user.id, log).catch(console.error);
     setValues({});
     setTags([]);
     setSaved(true);

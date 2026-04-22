@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "@/db";
 import type { FastingProtocol } from "@/db/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { syncSession, updateSessionEndedAt, updateSessionStartedAt, deleteSession } from "@/lib/sync";
 import { useActiveFast, useFastHistory } from "@/hooks/useFasts";
 import { useMetabolicLogsInWindow } from "@/hooks/useLogs";
 import { useNow } from "@/hooks/useNow";
@@ -50,6 +52,7 @@ function gkiColor(v: number): string {
 }
 
 export function FastRoute() {
+  const { user } = useAuth();
   const active = useActiveFast();
   const history = useFastHistory(20);
   const [selected, setSelected] = useState<FastingProtocol>("18:6");
@@ -133,7 +136,10 @@ export function FastRoute() {
   async function startFast() {
     const p = getProtocol(selected);
     const startedAt = Date.now();
-    await db.fastingSessions.add({ startedAt, endedAt: null, targetHours: p.targetHours, protocol: selected });
+    const uuid = crypto.randomUUID();
+    const session = { uuid, startedAt, endedAt: null, targetHours: p.targetHours, protocol: selected };
+    await db.fastingSessions.add(session);
+    if (user) syncSession(user.id, session).catch(console.error);
     if (p.targetHours !== null) {
       const granted = await ensureNotificationPermission();
       if (granted) scheduleBreakFastReminder(startedAt + p.targetHours * HOUR_MS, p.label);
@@ -142,7 +148,9 @@ export function FastRoute() {
 
   async function endFast() {
     if (!active?.id) return;
-    await db.fastingSessions.update(active.id, { endedAt: Date.now() });
+    const endedAt = Date.now();
+    await db.fastingSessions.update(active.id, { endedAt });
+    if (user && active.uuid) updateSessionEndedAt(active.uuid, endedAt).catch(console.error);
     cancelBreakFastReminder();
   }
 
@@ -150,6 +158,7 @@ export function FastRoute() {
     if (!active?.id) return;
     if (!window.confirm("Discard this fast? It won't count toward history.")) return;
     await db.fastingSessions.delete(active.id);
+    if (user && active.uuid) deleteSession(active.uuid).catch(console.error);
     cancelBreakFastReminder();
   }
 
@@ -159,6 +168,7 @@ export function FastRoute() {
     if (Number.isNaN(nextStartedAt)) { setStartTimeError("Enter a valid date and time."); return; }
     if (nextStartedAt > Date.now()) { setStartTimeError("Start time can't be in the future."); return; }
     await db.fastingSessions.update(active.id, { startedAt: nextStartedAt });
+    if (user && active.uuid) updateSessionStartedAt(active.uuid, nextStartedAt).catch(console.error);
     setStartTimeError(null);
     setEditingStartTime(false);
   }

@@ -2,6 +2,7 @@ import { db } from "@/db";
 import type { MetabolicLog } from "@/db/types";
 import { calculateGki, mgDlToMmol } from "@/lib/gki";
 import { normalizeTag } from "@/lib/tags";
+import { syncMetabolicLog } from "@/lib/sync";
 
 export interface ImportResult {
   added: number;
@@ -89,7 +90,7 @@ function toMmol(value: string, unit: string): number | null {
   return n;
 }
 
-export async function importMetabolicCsv(text: string): Promise<ImportResult> {
+export async function importMetabolicCsv(text: string, userId?: string): Promise<ImportResult> {
   const rows = parseCsv(text);
   const byTimestamp = new Map<string, { glucose?: CsvRow; ketone?: CsvRow }>();
 
@@ -136,7 +137,9 @@ export async function importMetabolicCsv(text: string): Promise<ImportResult> {
           ? calculateGki(glucoseMmol, ketonesMmol)
           : null;
 
+      const uuid = crypto.randomUUID();
       const log: Omit<MetabolicLog, "id"> = {
+        uuid,
         timestamp,
         glucoseMmol,
         ketonesMmol,
@@ -147,6 +150,7 @@ export async function importMetabolicCsv(text: string): Promise<ImportResult> {
       };
 
       await db.metabolicLogs.add(log);
+      if (userId) syncMetabolicLog(userId, { ...log, uuid }).catch(console.error);
       added++;
     } catch {
       failed++;
