@@ -89,11 +89,11 @@ export function useLoseItSync() {
 
       if (dailySummaries.length > 0) {
         await db.dailyCalories.bulkPut(dailySummaries.map(s => ({ ...s, syncedAt })));
+        // Only advance the pointer when we actually received data
+        localStorage.setItem(OLDEST_SYNCED_KEY, weekStart);
+        setOldestSynced(weekStart);
       }
 
-      // Advance the oldest pointer regardless (prevents infinite empty retries)
-      localStorage.setItem(OLDEST_SYNCED_KEY, weekStart);
-      setOldestSynced(weekStart);
       localStorage.setItem(LAST_SYNC_KEY, String(syncedAt));
       setLastSyncedAt(syncedAt);
     } catch (e) {

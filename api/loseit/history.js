@@ -60,17 +60,15 @@ export default async function handler(req, res) {
       restSummaries = await fetchRestHistory(session, startDate, endDate) ?? [];
     }
 
-    // Merge: GWT data takes precedence (more reliable), REST fills gaps
+    // Merge all sources — GWT covers the recent window, REST covers the requested range.
+    // Do NOT filter GWT results by date: GWT always returns recent days regardless of
+    // what range was requested, so filtering would drop all GWT data for old ranges.
     const byDate = new Map();
     for (const s of [...restSummaries, ...gwtSummaries]) byDate.set(s.date, s);
 
-    // Filter to requested range if provided, then sort ascending
-    let dailySummaries = [...byDate.values()];
-    if (startDate) dailySummaries = dailySummaries.filter(s => s.date >= startDate);
-    if (endDate)   dailySummaries = dailySummaries.filter(s => s.date <= endDate);
-    dailySummaries.sort((a, b) => a.date.localeCompare(b.date));
+    const dailySummaries = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 
-    res.status(200).json({ dailySummaries, restWorked: restSummaries.length > 0 });
+    res.status(200).json({ dailySummaries, restWorked: restSummaries.length > 0, gwtCount: gwtSummaries.length, restCount: restSummaries.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
