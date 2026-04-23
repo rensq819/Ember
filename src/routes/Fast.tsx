@@ -4,7 +4,7 @@ import type { FastingProtocol } from "@/db/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { syncSession, updateSessionEndedAt, updateSessionStartedAt, deleteSession } from "@/lib/sync";
 import { useActiveFast, useFastHistory } from "@/hooks/useFasts";
-import { useMetabolicLogsInWindow } from "@/hooks/useLogs";
+import { useMetabolicLogsInWindow, useSettings } from "@/hooks/useLogs";
 import { useNow } from "@/hooks/useNow";
 import { ProtocolPicker } from "@/components/fast/ProtocolPicker";
 import { EmberFlame } from "@/components/fast/EmberFlame";
@@ -12,7 +12,7 @@ import { getProtocol } from "@/lib/protocols";
 import { formatDate, formatTime } from "@/lib/format";
 import { getFastingStage, FASTING_STAGES } from "@/lib/fasting-stages";
 import { calculateStreak } from "@/lib/streak";
-import { getStageColor, nextStage, hexA, STAGE_ORDER, STAGE_COPY } from "@/lib/stage-palette";
+import { getStageColor, nextStage, hexA, STAGE_ORDER, STAGE_COPY, KETO_STAGE_COPY } from "@/lib/stage-palette";
 import {
   cancelBreakFastReminder,
   ensureNotificationPermission,
@@ -63,6 +63,9 @@ export function FastRoute() {
   const [showCelebration, setShowCelebration] = useState<string | null>(null);
   const now = useNow(1000);
   const metabolicInWindow = useMetabolicLogsInWindow(active?.startedAt, active?.endedAt);
+
+  const settings = useSettings();
+  const isKeto = settings.dietMode === 'keto';
 
   const isDark = document.documentElement.classList.contains('dark');
 
@@ -173,14 +176,23 @@ export function FastRoute() {
     setEditingStartTime(false);
   }
 
-  const stageHeadline: Record<string, React.ReactNode> = {
-    fed:            <><span>The ember</span><br /><em style={{ color: stageColor.glow, fontStyle: 'italic' }}>rests.</em></>,
-    early:          <><span>Insulin</span><br /><em style={{ color: stageColor.glow, fontStyle: 'italic' }}>retreating.</em></>,
-    "fat-burning":  <><span>Lipolysis</span><br /><em style={{ color: stageColor.glow, fontStyle: 'italic' }}>accelerating.</em></>,
-    ketosis:        <><span>You crossed</span><br /><em style={{ color: stageColor.glow, fontStyle: 'italic' }}>over.</em></>,
-    "deep-ketosis": <><span>Ketones</span><br /><em style={{ color: stageColor.glow, fontStyle: 'italic' }}>ascendant.</em></>,
-    autophagy:      <><span>Cellular</span><br /><em style={{ color: stageColor.glow, fontStyle: 'italic' }}>spring-clean.</em></>,
-    "deep-autophagy": <><span>Stem cells</span><br /><em style={{ color: stageColor.glow, fontStyle: 'italic' }}>signalling.</em></>,
+  const em = (text: string) => <em style={{ color: stageColor.glow, fontStyle: 'italic' }}>{text}</em>;
+  const stageHeadline: Record<string, React.ReactNode> = isKeto ? {
+    fed:              <><span>Glucose</span><br />{em('clearing.')}</>,
+    early:            <><span>Glycogen</span><br />{em('depleting.')}</>,
+    "fat-burning":    <><span>Fat oxidation</span><br />{em('dominant.')}</>,
+    ketosis:          <><span>Fasted ketosis</span><br />{em('deepening.')}</>,
+    "deep-ketosis":   <><span>Ketones</span><br />{em('therapeutic.')}</>,
+    autophagy:        <><span>Cellular</span><br />{em('spring-clean.')}</>,
+    "deep-autophagy": <><span>Stem cells</span><br />{em('signalling.')}</>,
+  } : {
+    fed:              <><span>The ember</span><br />{em('rests.')}</>,
+    early:            <><span>Insulin</span><br />{em('retreating.')}</>,
+    "fat-burning":    <><span>Lipolysis</span><br />{em('accelerating.')}</>,
+    ketosis:          <><span>You crossed</span><br />{em('over.')}</>,
+    "deep-ketosis":   <><span>Ketones</span><br />{em('ascendant.')}</>,
+    autophagy:        <><span>Cellular</span><br />{em('spring-clean.')}</>,
+    "deep-autophagy": <><span>Stem cells</span><br />{em('signalling.')}</>,
   };
 
   return (
@@ -285,6 +297,7 @@ export function FastRoute() {
               open={learnOpen}
               onToggle={() => setLearnOpen(o => !o)}
               isDark={isDark}
+              isKeto={isKeto}
             />
           </div>
 
@@ -465,9 +478,9 @@ function ReadingBit({ label, value, unit, color, align }: { label: string; value
   );
 }
 
-function StageLearnCard({ stageKey, open, onToggle, isDark: _isDark }: { stageKey: string; open: boolean; onToggle: () => void; isDark: boolean }) {
+function StageLearnCard({ stageKey, open, onToggle, isDark: _isDark, isKeto }: { stageKey: string; open: boolean; onToggle: () => void; isDark: boolean; isKeto: boolean }) {
   const sc = getStageColor(stageKey);
-  const copy = STAGE_COPY[stageKey];
+  const copy = (isKeto ? KETO_STAGE_COPY : STAGE_COPY)[stageKey];
   return (
     <div style={{ border: '1px solid hsl(var(--border))', borderRadius: 20, background: 'hsl(var(--card))', overflow: 'hidden' }}>
       <button onClick={onToggle} style={{

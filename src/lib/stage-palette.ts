@@ -43,7 +43,9 @@ export function hexA(hex: string, a: number): string {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-export const STAGE_COPY: Record<string, { headline: string; body: string; bullets: { tag: string; text: string }[] }> = {
+type StageCopyEntry = { headline: string; body: string; bullets: { tag: string; text: string }[] };
+
+export const STAGE_COPY: Record<string, StageCopyEntry> = {
   fed: {
     headline: 'Digesting. Insulin is high, nutrients absorbing.',
     body: 'The body has fuel to burn. Growth pathways are open; storage is active. Not a bad place — just not where ketosis happens.',
@@ -95,6 +97,65 @@ export const STAGE_COPY: Record<string, { headline: string; body: string; bullet
   "deep-autophagy": {
     headline: 'Stem cell signalling. Strong autophagic response.',
     body: 'Past 72 hours, the regenerative end of fasting opens up — stem cell activity rises, immune cells refresh.',
+    bullets: [
+      { tag: 'Rare', text: 'Most effects scale with duration.' },
+      { tag: 'Care', text: 'Refeed gently. Electrolytes first, protein next.' },
+    ],
+  },
+};
+
+export const KETO_STAGE_COPY: Record<string, StageCopyEntry> = {
+  fed: {
+    headline: 'Glucose clearing. Ketones likely still active.',
+    body: "On a ketogenic diet, insulin stays low even after eating. A brief glucose rise won't shut down ketone production — your metabolic state recovers quickly.",
+    bullets: [
+      { tag: 'Note', text: 'Fasting ketones often persist at 0.3–0.8 mmol/L.' },
+      { tag: 'Tip',  text: 'Keeping meals low-carb preserves your baseline state.' },
+    ],
+  },
+  early: {
+    headline: 'Glycogen depleting. Fasted ketosis accelerating.',
+    body: 'With insulin already low, the liver transitions quickly. Glycogen reserves — kept smaller by keto — empty faster, accelerating the shift into fasted ketosis.',
+    bullets: [
+      { tag: 'Fast', text: 'Fat-adapted metabolism means the switch is quicker.' },
+      { tag: 'Feel', text: 'Hunger blunted — fat adaptation dampens ghrelin swings.' },
+    ],
+  },
+  "fat-burning": {
+    headline: 'Lipolysis fully active. Fat oxidation dominant.',
+    body: 'Fatty acids flow from adipose tissue with ease. A fat-adapted metabolism skips the adjustment period — ketone production is already well established.',
+    bullets: [
+      { tag: 'Rising', text: 'β-hydroxybutyrate above your dietary-keto baseline.' },
+      { tag: 'Stable', text: 'Energy is steady — no glucose crash to manage.' },
+    ],
+  },
+  ketosis: {
+    headline: 'Fasted ketosis. Deepening beyond dietary baseline.',
+    body: "Where a standard faster just crossed the threshold, you're already beyond it. Fasting deepens an established ketone state — expect GKI in the strong range.",
+    bullets: [
+      { tag: 'GKI',   text: 'Likely 1–3, tracking toward therapeutic range.' },
+      { tag: 'Watch', text: 'Keto + fasting increases sodium loss — replenish.' },
+    ],
+  },
+  "deep-ketosis": {
+    headline: 'Therapeutic ketosis. Diet and fast compounding.',
+    body: 'Combining dietary fat-adaptation with extended fasting drives ketones higher than either approach alone. β-hydroxybutyrate may approach or exceed 3 mmol/L.',
+    bullets: [
+      { tag: 'GKI',   text: 'Sub-1 is reachable — therapeutic depth.' },
+      { tag: 'Clock', text: 'Autophagy becomes significant at 48h.' },
+    ],
+  },
+  autophagy: {
+    headline: 'Autophagy active. Protein-sparing state engaged.',
+    body: 'Fat-adapted fasting directs autophagy toward cellular debris rather than structural protein. Abundant ketone fuel means cellular cleanup proceeds without muscle catabolism pressure.',
+    bullets: [
+      { tag: 'Peaks', text: '~48–72h of uninterrupted fasting.' },
+      { tag: 'Break', text: 'Even small calories pause the process.' },
+    ],
+  },
+  "deep-autophagy": {
+    headline: 'Deep autophagy. Stable fuel, deep renewal.',
+    body: 'Fat adaptation provides a stable energy base for extended fasting. Stem cell signalling, immune cell renewal, and deep autophagy proceed with less metabolic stress.',
     bullets: [
       { tag: 'Rare', text: 'Most effects scale with duration.' },
       { tag: 'Care', text: 'Refeed gently. Electrolytes first, protein next.' },
