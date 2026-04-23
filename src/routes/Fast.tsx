@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "@/db";
-import type { FastingProtocol } from "@/db/types";
+import type { FastingProtocol, FastingSession } from "@/db/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { syncSession, updateSessionEndedAt, updateSessionStartedAt, deleteSession } from "@/lib/sync";
 import { useActiveFast, useFastHistory } from "@/hooks/useFasts";
@@ -8,7 +8,7 @@ import { useMetabolicLogsInWindow, useSettings } from "@/hooks/useLogs";
 import { useNow } from "@/hooks/useNow";
 import { ProtocolPicker } from "@/components/fast/ProtocolPicker";
 import { EmberFlame } from "@/components/fast/EmberFlame";
-import { getProtocol } from "@/lib/protocols";
+import { getProtocol, PROTOCOLS } from "@/lib/protocols";
 import { formatDate, formatTime } from "@/lib/format";
 import { getFastingStage, FASTING_STAGES } from "@/lib/fasting-stages";
 import { calculateStreak } from "@/lib/streak";
@@ -61,6 +61,7 @@ export function FastRoute() {
   const [startTimeError, setStartTimeError] = useState<string | null>(null);
   const [learnOpen, setLearnOpen] = useState(false);
   const [showCelebration, setShowCelebration] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const now = useNow(1000);
   const metabolicInWindow = useMetabolicLogsInWindow(active?.startedAt, active?.endedAt);
 
@@ -174,6 +175,19 @@ export function FastRoute() {
     if (user && active.uuid) updateSessionStartedAt(active.uuid, nextStartedAt).catch(console.error);
     setStartTimeError(null);
     setEditingStartTime(false);
+  }
+
+  async function saveHistoryEdit(session: FastingSession, updates: {
+    startedAt: number; endedAt: number; protocol: FastingProtocol; notes: string | undefined;
+  }) {
+    if (!session.id) return;
+    const targetHours = getProtocol(updates.protocol).targetHours;
+    await db.fastingSessions.update(session.id, { ...updates, targetHours });
+    if (user && session.uuid) syncSession(user.id, {
+      uuid: session.uuid, startedAt: updates.startedAt, endedAt: updates.endedAt,
+      targetHours, protocol: updates.protocol, notes: updates.notes,
+    }).catch(console.error);
+    setEditingId(null);
   }
 
   const em = (text: string) => <em style={{ color: stageColor.glow, fontStyle: 'italic' }}>{text}</em>;
@@ -381,6 +395,19 @@ export function FastRoute() {
           <SectionHeader eyebrow="Archive" title="Recent fasts" />
           <div className="rounded-[18px] overflow-hidden border" style={{ background: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
             {history.slice(0, 8).map((s, i, arr) => {
+              const borderBottom = i < arr.length - 1 ? '1px solid hsl(var(--border))' : 'none';
+              if (editingId === s.id) {
+                return (
+                  <HistoryEditCard
+                    key={s.id}
+                    session={s}
+                    now={now}
+                    borderBottom={borderBottom}
+                    onSave={(updates) => saveHistoryEdit(s, updates)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                );
+              }
               const dur = (s.endedAt ?? Date.now()) - s.startedAt;
               const hours = dur / HOUR_MS;
               const target = s.targetHours ?? hours;
@@ -388,9 +415,8 @@ export function FastRoute() {
               const hit = hours >= target;
               return (
                 <div key={s.id} style={{
-                  display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center',
-                  padding: '14px 16px', gap: 10,
-                  borderBottom: i < arr.length - 1 ? '1px solid hsl(var(--border))' : 'none',
+                  display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center',
+                  padding: '14px 16px', gap: 10, borderBottom,
                 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -413,6 +439,17 @@ export function FastRoute() {
                       {hit ? 'HIT' : 'SHORT'}
                     </div>
                   </div>
+                  <button
+                    onClick={() => setEditingId(s.id ?? null)}
+                    style={{
+                      width: 30, height: 30, border: 'none', background: 'transparent',
+                      color: 'hsl(var(--muted-foreground))', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      borderRadius: 8, flexShrink: 0,
+                    }}
+                  >
+                    <IconPencil />
+                  </button>
                 </div>
               );
             })}
@@ -577,6 +614,98 @@ function StageCelebration({ stageKey, onDismiss }: { stageKey: string; onDismiss
         <div className="font-display mt-0.5" style={{ fontSize: 24, letterSpacing: -0.5 }}>
           Welcome to {sc.label.toLowerCase()}.
         </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoryEditCard({ session, now, borderBottom, onSave, onCancel }: {
+  session: FastingSession;
+  now: number;
+  borderBottom: string;
+  onSave: (updates: { startedAt: number; endedAt: number; protocol: FastingProtocol; notes: string | undefined }) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [startDraft, setStartDraft] = useState(toLocalDateTimeInputValue(session.startedAt));
+  const [endDraft, setEndDraft] = useState(session.endedAt ? toLocalDateTimeInputValue(session.endedAt) : '');
+  const [protocol, setProtocol] = useState<FastingProtocol>(session.protocol);
+  const [notes, setNotes] = useState(session.notes ?? '');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const startedAt = Date.parse(startDraft);
+    const endedAt = Date.parse(endDraft);
+    if (isNaN(startedAt)) { setError('Start time is invalid.'); return; }
+    if (isNaN(endedAt)) { setError('End time is invalid.'); return; }
+    if (endedAt <= startedAt) { setError('End time must be after start time.'); return; }
+    if (endedAt > now) { setError("End time can't be in the future."); return; }
+    setSaving(true);
+    try {
+      await onSave({ startedAt, endedAt, protocol, notes: notes.trim() || undefined });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inp: React.CSSProperties = {
+    width: '100%', borderRadius: 10, border: '1px solid hsl(var(--border))',
+    background: 'hsl(var(--background))', color: 'hsl(var(--foreground))',
+    padding: '9px 12px', fontSize: 13, outline: 'none',
+    fontFamily: '"Geist", system-ui, sans-serif', boxSizing: 'border-box',
+  };
+
+  return (
+    <div style={{ padding: '14px 16px', borderBottom, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div>
+          <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Start</div>
+          <input type="datetime-local" value={startDraft}
+            onChange={e => { setStartDraft(e.target.value); setError(null); }}
+            max={toLocalDateTimeInputValue(now)} style={inp} />
+        </div>
+        <div>
+          <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>End</div>
+          <input type="datetime-local" value={endDraft}
+            onChange={e => { setEndDraft(e.target.value); setError(null); }}
+            max={toLocalDateTimeInputValue(now)} style={inp} />
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Protocol</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+          {PROTOCOLS.map(p => (
+            <button key={p.key} onClick={() => setProtocol(p.key)} style={{
+              padding: '4px 11px', borderRadius: 999, border: '1px solid',
+              borderColor: protocol === p.key ? '#D4A48E' : 'hsl(var(--border))',
+              background: protocol === p.key ? 'rgba(212,164,142,0.12)' : 'transparent',
+              color: protocol === p.key ? '#D4A48E' : 'hsl(var(--muted-foreground))',
+              fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              fontFamily: '"Geist", system-ui, sans-serif',
+            }}>{p.label}</button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Notes</div>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Optional" rows={2}
+          style={{ ...inp, resize: 'vertical' }} />
+      </div>
+      {error && <p className="text-xs" style={{ color: '#B97A63', margin: 0 }}>{error}</p>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <button onClick={onCancel} style={{
+          borderRadius: 12, border: '1px solid hsl(var(--border))', padding: '10px',
+          background: 'transparent', color: 'hsl(var(--muted-foreground))',
+          fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          fontFamily: '"Geist", system-ui, sans-serif',
+        }}>Cancel</button>
+        <button onClick={save} disabled={saving} style={{
+          borderRadius: 12, border: 'none', padding: '10px',
+          background: '#D4A48E', color: '#1F1C18',
+          fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer',
+          opacity: saving ? 0.7 : 1, fontFamily: '"Geist", system-ui, sans-serif',
+        }}>{saving ? 'Saving…' : 'Save'}</button>
       </div>
     </div>
   );
