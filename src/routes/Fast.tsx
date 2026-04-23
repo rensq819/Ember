@@ -150,17 +150,17 @@ export function FastRoute() {
   }
 
   async function endFast() {
-    if (!active?.id) return;
+    if (!active) return;
     const endedAt = Date.now();
-    await db.fastingSessions.update(active.id, { endedAt });
+    await db.fastingSessions.filter(s => s.endedAt === null).modify({ endedAt });
     if (user && active.uuid) updateSessionEndedAt(active.uuid, endedAt).catch(console.error);
     cancelBreakFastReminder();
   }
 
   async function cancelFast() {
-    if (!active?.id) return;
+    if (!active) return;
     if (!window.confirm("Discard this fast? It won't count toward history.")) return;
-    await db.fastingSessions.delete(active.id);
+    await db.fastingSessions.filter(s => s.endedAt === null).delete();
     if (user && active.uuid) deleteSession(active.uuid).catch(console.error);
     cancelBreakFastReminder();
   }
