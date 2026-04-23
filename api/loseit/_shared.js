@@ -208,6 +208,7 @@ function parseDailySummaries(gwt) {
     const baseBudget = Math.round(typeof budget === "number" ? budget : tdee);
     const exerciseCal = Math.round(typeof exercise === "number" ? exercise : 0);
     const effectiveBudget = baseBudget + exerciseCal;
+    console.log(`[loseit] day=${dayToDateStr(d)} tdee=${tdee} budget=${budget} eaten=${eaten} exercise=${exercise} => effectiveBudget=${effectiveBudget}`);
     entries.push({
       date: dayToDateStr(d), dayNumber: d,
       caloriesBudget: effectiveBudget,
