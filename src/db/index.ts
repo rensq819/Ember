@@ -56,6 +56,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     optimal: [1, 6],
   },
   theme: "dark",
+  dietMode: "standard",
 };
 
 export async function getSettings(): Promise<UserSettings> {

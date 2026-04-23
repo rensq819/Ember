@@ -50,6 +50,7 @@ export interface UserSettings {
     optimal: [number, number];
   };
   theme: "system" | "light" | "dark";
+  dietMode?: "standard" | "keto";
   loseIt?: {
     email: string;
     timezone: string;

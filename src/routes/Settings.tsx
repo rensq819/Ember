@@ -56,6 +56,12 @@ export function SettingsRoute() {
     await db.userSettings.put(next);
   }
 
+  async function updateDietMode(mode: "standard" | "keto") {
+    const next = { ...settings, dietMode: mode };
+    setSettings(next);
+    await db.userSettings.put(next);
+  }
+
   async function connectLoseIt() {
     setLiConnecting(true);
     setLiStatus(null);
@@ -144,6 +150,38 @@ export function SettingsRoute() {
             );
           })}
         </div>
+      </SettingsSection>
+
+      {/* Diet mode */}
+      <SettingsSection title="Diet mode">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {([
+            { key: 'standard', label: 'Standard', sub: 'Intermittent fasting · general' },
+            { key: 'keto',     label: 'Keto',     sub: 'Fat-adapted · low-carb baseline' },
+          ] as const).map(({ key, label, sub }) => {
+            const active = (settings.dietMode ?? 'standard') === key;
+            return (
+              <button key={key} onClick={() => updateDietMode(key)} style={{
+                padding: '16px 14px', borderRadius: 18, cursor: 'pointer', textAlign: 'left',
+                border: `1.5px solid ${active ? '#9D93B7' : 'hsl(var(--border))'}`,
+                background: 'hsl(var(--card))', color: 'hsl(var(--foreground))',
+                position: 'relative', fontFamily: '"Geist", system-ui, sans-serif',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 10, right: 10,
+                  width: 14, height: 14, borderRadius: 7,
+                  border: `1.5px solid ${active ? '#9D93B7' : 'rgba(128,128,128,0.4)'}`,
+                  background: active ? '#9D93B7' : 'transparent',
+                }} />
+                <div className="font-display" style={{ fontSize: 20, letterSpacing: -0.3 }}>{label}</div>
+                <div style={{ fontSize: 11, opacity: 0.65, marginTop: 2 }}>{sub}</div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs mt-2.5" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.5 }}>
+          Adjusts stage descriptions and headlines to reflect your metabolic baseline.
+        </p>
       </SettingsSection>
 
       {/* Glucose unit */}
