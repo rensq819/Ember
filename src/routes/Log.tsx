@@ -62,7 +62,7 @@ function CalSummaryCard({ eaten, budget, remaining, exercise, label }: {
 }
 
 function FoodTab() {
-  const { sync, syncing, error, lastSyncedAt } = useLoseItSync();
+  const { sync, syncMore, syncing, syncingLabel, error, lastSyncedAt } = useLoseItSync();
   const today = localDateStr();
   const todaySummary = useLiveQuery(() => db.dailyCalories.get(today), [today]);
   const history = useLiveQuery(() => db.dailyCalories.orderBy("date").reverse().limit(90).toArray(), []);
@@ -158,17 +158,19 @@ function FoodTab() {
               );
             })}
           </div>
-          <div className="text-xs mt-3 text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            Showing {pastDays.length} day{pastDays.length !== 1 ? 's' : ''} of history
-            {!syncing && (
-              <button
-                onClick={() => sync()}
-                style={{ marginLeft: 8, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'hsl(var(--muted-foreground))' }}
-              >
-                Sync more
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => syncMore()}
+            disabled={syncing}
+            style={{
+              marginTop: 10, width: '100%', padding: '10px 0', borderRadius: 12,
+              border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))',
+              color: 'hsl(var(--muted-foreground))', fontSize: 12, cursor: syncing ? 'default' : 'pointer',
+              opacity: syncing ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            <RefreshCw className={cn("h-3 w-3", syncing && syncingLabel && "animate-spin")} />
+            {syncing && syncingLabel ? `Syncing ${syncingLabel}…` : "Load older history"}
+          </button>
         </div>
       )}
     </div>

@@ -111,6 +111,15 @@ export interface SyncResult {
   dailySummaries: DailySummaryResult[];
 }
 
+export interface HistoryResult {
+  dailySummaries: DailySummaryResult[];
+  restWorked: boolean;
+}
+
+export function loseItHistory(startDate: string, endDate: string): Promise<HistoryResult> {
+  return call<HistoryResult>(`/history?start=${startDate}&end=${endDate}`);
+}
+
 export function loseItSync(date?: string): Promise<SyncResult> {
   return call<SyncResult>(`/sync${date ? `?date=${date}` : ""}`);
 }

@@ -1,24 +1,36 @@
 import { useEffect, useRef, useState } from "react";
 import { db } from "@/db";
-import { loseItSync, getStoredCreds } from "@/lib/loseit";
+import { loseItSync, loseItHistory, getStoredCreds } from "@/lib/loseit";
 
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000;
 const LAST_SYNC_KEY = "loseit-last-sync";
+const OLDEST_SYNCED_KEY = "loseit-oldest-synced";
 
 function localDateStr(): string {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
 }
 
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 let autoSyncTriggered = false;
 
 export function useLoseItSync() {
   const [syncing, setSyncing] = useState(false);
+  const [syncingLabel, setSyncingLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(() => {
     const stored = localStorage.getItem(LAST_SYNC_KEY);
     return stored ? parseInt(stored, 10) : null;
   });
+  // oldest date we've requested history for (ISO YYYY-MM-DD)
+  const [oldestSynced, setOldestSynced] = useState<string>(
+    () => localStorage.getItem(OLDEST_SYNCED_KEY) ?? localDateStr()
+  );
 
   const syncRef = useRef<((date?: string) => Promise<void>) | null>(null);
 
@@ -31,6 +43,7 @@ export function useLoseItSync() {
 
   async function sync(date?: string) {
     setSyncing(true);
+    setSyncingLabel(null);
     setError(null);
     try {
       const targetDate = date ?? localDateStr();
@@ -60,6 +73,38 @@ export function useLoseItSync() {
     }
   }
 
+  // Fetch one older week and save it. Called each time the user taps "Sync more".
+  async function syncMore() {
+    setSyncing(true);
+    setError(null);
+    try {
+      // The next week to fetch ends one day before what we already have
+      const weekEnd   = addDays(oldestSynced, -1);
+      const weekStart = addDays(weekEnd, -6);
+
+      setSyncingLabel(`${weekStart} – ${weekEnd}`);
+
+      const { dailySummaries } = await loseItHistory(weekStart, weekEnd);
+      const syncedAt = Date.now();
+
+      if (dailySummaries.length > 0) {
+        await db.dailyCalories.bulkPut(dailySummaries.map(s => ({ ...s, syncedAt })));
+      }
+
+      // Advance the oldest pointer regardless (prevents infinite empty retries)
+      localStorage.setItem(OLDEST_SYNCED_KEY, weekStart);
+      setOldestSynced(weekStart);
+      localStorage.setItem(LAST_SYNC_KEY, String(syncedAt));
+      setLastSyncedAt(syncedAt);
+    } catch (e) {
+      console.error("[loseit] syncMore error:", e);
+      setError(friendlyError(e));
+    } finally {
+      setSyncing(false);
+      setSyncingLabel(null);
+    }
+  }
+
   syncRef.current = sync;
 
   useEffect(() => {
@@ -72,5 +117,5 @@ export function useLoseItSync() {
     }
   }, []);
 
-  return { sync, syncing, error, lastSyncedAt };
+  return { sync, syncMore, syncing, syncingLabel, error, lastSyncedAt };
 }
