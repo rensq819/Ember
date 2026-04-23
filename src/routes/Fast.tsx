@@ -190,6 +190,13 @@ export function FastRoute() {
     setEditingId(null);
   }
 
+  async function deleteHistorySession(session: FastingSession) {
+    if (!window.confirm('Delete this fast? It will be removed from history.')) return;
+    if (session.id) await db.fastingSessions.delete(session.id);
+    if (user && session.uuid) deleteSession(session.uuid).catch(console.error);
+    setEditingId(null);
+  }
+
   const em = (text: string) => <em style={{ color: stageColor.glow, fontStyle: 'italic' }}>{text}</em>;
   const stageHeadline: Record<string, React.ReactNode> = isKeto ? {
     fed:              <><span>Glucose</span><br />{em('clearing.')}</>,
@@ -404,6 +411,7 @@ export function FastRoute() {
                     now={now}
                     borderBottom={borderBottom}
                     onSave={(updates) => saveHistoryEdit(s, updates)}
+                    onDelete={() => deleteHistorySession(s)}
                     onCancel={() => setEditingId(null)}
                   />
                 );
@@ -619,11 +627,12 @@ function StageCelebration({ stageKey, onDismiss }: { stageKey: string; onDismiss
   );
 }
 
-function HistoryEditCard({ session, now, borderBottom, onSave, onCancel }: {
+function HistoryEditCard({ session, now, borderBottom, onSave, onDelete, onCancel }: {
   session: FastingSession;
   now: number;
   borderBottom: string;
   onSave: (updates: { startedAt: number; endedAt: number; protocol: FastingProtocol; notes: string | undefined }) => Promise<void>;
+  onDelete: () => void;
   onCancel: () => void;
 }) {
   const [startDraft, setStartDraft] = useState(toLocalDateTimeInputValue(session.startedAt));
@@ -651,43 +660,44 @@ function HistoryEditCard({ session, now, borderBottom, onSave, onCancel }: {
   const inp: React.CSSProperties = {
     width: '100%', borderRadius: 10, border: '1px solid hsl(var(--border))',
     background: 'hsl(var(--background))', color: 'hsl(var(--foreground))',
-    padding: '9px 12px', fontSize: 13, outline: 'none',
+    padding: '11px 12px', fontSize: 14, outline: 'none',
     fontFamily: '"Geist", system-ui, sans-serif', boxSizing: 'border-box',
   };
+  const label = (text: string) => (
+    <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>{text}</div>
+  );
 
   return (
-    <div style={{ padding: '14px 16px', borderBottom, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <div>
-          <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Start</div>
-          <input type="datetime-local" value={startDraft}
-            onChange={e => { setStartDraft(e.target.value); setError(null); }}
-            max={toLocalDateTimeInputValue(now)} style={inp} />
-        </div>
-        <div>
-          <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>End</div>
-          <input type="datetime-local" value={endDraft}
-            onChange={e => { setEndDraft(e.target.value); setError(null); }}
-            max={toLocalDateTimeInputValue(now)} style={inp} />
-        </div>
+    <div style={{ padding: '16px', borderBottom, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div>
+        {label('Start')}
+        <input type="datetime-local" value={startDraft}
+          onChange={e => { setStartDraft(e.target.value); setError(null); }}
+          max={toLocalDateTimeInputValue(now)} style={inp} />
       </div>
       <div>
-        <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Protocol</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+        {label('End')}
+        <input type="datetime-local" value={endDraft}
+          onChange={e => { setEndDraft(e.target.value); setError(null); }}
+          max={toLocalDateTimeInputValue(now)} style={inp} />
+      </div>
+      <div>
+        {label('Protocol')}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {PROTOCOLS.map(p => (
             <button key={p.key} onClick={() => setProtocol(p.key)} style={{
-              padding: '4px 11px', borderRadius: 999, border: '1px solid',
+              padding: '6px 13px', borderRadius: 999, border: '1px solid',
               borderColor: protocol === p.key ? '#D4A48E' : 'hsl(var(--border))',
               background: protocol === p.key ? 'rgba(212,164,142,0.12)' : 'transparent',
               color: protocol === p.key ? '#D4A48E' : 'hsl(var(--muted-foreground))',
-              fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              fontSize: 13, fontWeight: 500, cursor: 'pointer',
               fontFamily: '"Geist", system-ui, sans-serif',
             }}>{p.label}</button>
           ))}
         </div>
       </div>
       <div>
-        <div className="text-xs font-semibold tracking-[1.4px] uppercase mb-1.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Notes</div>
+        {label('Notes')}
         <textarea value={notes} onChange={e => setNotes(e.target.value)}
           placeholder="Optional" rows={2}
           style={{ ...inp, resize: 'vertical' }} />
@@ -695,18 +705,24 @@ function HistoryEditCard({ session, now, borderBottom, onSave, onCancel }: {
       {error && <p className="text-xs" style={{ color: '#B97A63', margin: 0 }}>{error}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <button onClick={onCancel} style={{
-          borderRadius: 12, border: '1px solid hsl(var(--border))', padding: '10px',
+          borderRadius: 12, border: '1px solid hsl(var(--border))', padding: '11px',
           background: 'transparent', color: 'hsl(var(--muted-foreground))',
-          fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          fontSize: 14, fontWeight: 500, cursor: 'pointer',
           fontFamily: '"Geist", system-ui, sans-serif',
         }}>Cancel</button>
         <button onClick={save} disabled={saving} style={{
-          borderRadius: 12, border: 'none', padding: '10px',
+          borderRadius: 12, border: 'none', padding: '11px',
           background: '#D4A48E', color: '#1F1C18',
-          fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer',
+          fontSize: 14, fontWeight: 600, cursor: saving ? 'default' : 'pointer',
           opacity: saving ? 0.7 : 1, fontFamily: '"Geist", system-ui, sans-serif',
         }}>{saving ? 'Saving…' : 'Save'}</button>
       </div>
+      <button onClick={onDelete} style={{
+        width: '100%', borderRadius: 12, border: '1px solid rgba(185,122,99,0.3)',
+        padding: '11px', background: 'transparent', color: '#B97A63',
+        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+        fontFamily: '"Geist", system-ui, sans-serif',
+      }}>Delete this fast</button>
     </div>
   );
 }
