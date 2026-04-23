@@ -2,16 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { GlucoseKetoneForm } from "@/components/log/GlucoseKetoneForm";
-import { ElectrolyteForm } from "@/components/log/ElectrolyteForm";
 import { LogHistory } from "@/components/log/LogHistory";
 import { CsvImportButton } from "@/components/log/CsvImportButton";
-import { useElectrolyteLogs, useMetabolicLogs } from "@/hooks/useLogs";
+import { useMetabolicLogs } from "@/hooks/useLogs";
 import { useLoseItSync } from "@/hooks/useLoseItSync";
 import { getStoredCreds } from "@/lib/loseit";
 import { db } from "@/db";
 import { cn } from "@/lib/utils";
 
-type Tab = "metabolic" | "electrolyte" | "food";
+type Tab = "metabolic" | "food";
 
 function localDateStr() {
   const n = new Date();
@@ -180,18 +179,15 @@ function FoodTab() {
 export function LogRoute() {
   const [tab, setTab] = useState<Tab>("metabolic");
   const metabolic = useMetabolicLogs(50);
-  const electrolyte = useElectrolyteLogs(50);
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: "metabolic",   label: "Glucose · Ketones" },
-    { key: "electrolyte", label: "Electrolytes" },
-    { key: "food",        label: "Food" },
+    { key: "metabolic", label: "Glucose · Ketones" },
+    { key: "food",      label: "Food" },
   ];
 
   const accentColors: Record<Tab, string> = {
-    metabolic:   '#D076B7',
-    electrolyte: '#F5A64A',
-    food:        '#C89079',
+    metabolic: '#D076B7',
+    food:      '#C89079',
   };
 
   return (
@@ -205,14 +201,14 @@ export function LogRoute() {
           Log a <em style={{ fontStyle: 'italic', color: accentColors[tab] }}>reading.</em>
         </h1>
         <p className="text-sm mt-3" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.55 }}>
-          Pair glucose + ketones to compute GKI. Or track electrolytes.
+          Pair glucose + ketones to compute GKI.
         </p>
       </div>
 
       {/* Pill tab switcher */}
       <div className="px-6" style={{ paddingTop: 22 }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4,
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4,
           padding: 4, borderRadius: 999,
           background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))',
         }}>
@@ -236,21 +232,19 @@ export function LogRoute() {
             <GlucoseKetoneForm />
             <CsvImportButton />
           </div>
-        ) : tab === "electrolyte" ? (
-          <ElectrolyteForm />
         ) : (
           <FoodTab />
         )}
       </div>
 
       {/* History */}
-      {tab !== "food" && (
+      {tab === "metabolic" && (
         <div className="px-6" style={{ paddingTop: 34 }}>
           <div style={{ marginBottom: 12 }}>
             <div className="text-xs font-semibold tracking-[1.6px] uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>Ledger</div>
             <div className="font-display" style={{ fontSize: 26, letterSpacing: -0.5, lineHeight: 1 }}>History</div>
           </div>
-          <LogHistory metabolic={metabolic} electrolyte={electrolyte} />
+          <LogHistory metabolic={metabolic} electrolyte={[]} />
         </div>
       )}
     </div>
