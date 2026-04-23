@@ -65,7 +65,10 @@ async function call<T>(path: string, options?: RequestInit): Promise<T> {
   const creds = getStoredCreds();
   const session = getFreshSession();
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-LoseIt-Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
   if (creds) {
     headers["X-LoseIt-Email"] = creds.email;
     headers["X-LoseIt-Password"] = creds.password;

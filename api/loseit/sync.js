@@ -11,11 +11,11 @@ export default async function handler(req, res) {
       : (() => { const n = new Date(); return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())); })();
     const dayNum = dateToDayNumber(date);
 
-    // Reuse a cached session if the client sent one, otherwise do a fresh login.
+    const timezone = req.headers["x-loseit-timezone"] || req.query.tz || undefined;
     const session = await getOrCreateSession(req);
     const [initGwt, goalsGwt] = await Promise.all([
-      gwtRpc("getInitializationData", session),
-      gwtRpc("getGoalsData", session),
+      gwtRpc("getInitializationData", session, timezone),
+      gwtRpc("getGoalsData", session, timezone),
     ]);
 
     res.status(200).json({

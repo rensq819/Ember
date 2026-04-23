@@ -78,9 +78,10 @@ function getTimezoneOffset(tz) {
   return m ? parseInt(m[1], 10) : -5;
 }
 
-export async function gwtRpc(method, session) {
+export async function gwtRpc(method, session, timezone) {
   const { cookies, userId, username } = session;
-  const offset = getTimezoneOffset("America/Chicago");
+  const tz = timezone || "America/Chicago";
+  const offset = getTimezoneOffset(tz);
   const cookie = Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join("; ");
 
   const body = [
