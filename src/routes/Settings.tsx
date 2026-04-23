@@ -66,6 +66,12 @@ export function SettingsRoute() {
     await db.userSettings.put(next);
   }
 
+  async function updateDietMode(mode: "standard" | "keto") {
+    const next = { ...settings, dietMode: mode };
+    setSettings(next);
+    await db.userSettings.put(next);
+  }
+
   async function connectLoseIt() {
     setLiConnecting(true);
     setLiStatus(null);
