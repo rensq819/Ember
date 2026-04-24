@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { db } from '@/db';
-import { uploadLocalData, downloadCloudData } from '@/lib/sync';
+import { syncAllData } from '@/lib/sync';
 
 const SYNC_DONE_KEY = 'ember-cloud-synced';
 
@@ -23,10 +21,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
     syncedRef.current = true;
     setSyncing(true);
 
-    initialSync(user.id)
+    syncAllData(user.id)
+      .then(() => sessionStorage.setItem(SYNC_DONE_KEY, '1'))
       .catch(err => console.error('[ember] initial sync failed:', err))
       .finally(() => {
-        sessionStorage.setItem(SYNC_DONE_KEY, '1');
         setSyncing(false);
         setSyncDone(true);
       });
@@ -55,21 +53,4 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!syncDone) return null;
 
   return <>{children}</>;
-}
-
-async function initialSync(userId: string): Promise<void> {
-  const { count } = await supabase
-    .from('fasting_sessions')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId);
-
-  const localCount = await db.fastingSessions.count();
-
-  if ((count ?? 0) === 0 && localCount > 0) {
-    // First login: push existing local data to cloud
-    await uploadLocalData(userId);
-  } else if ((count ?? 0) > 0 && localCount === 0) {
-    // New/fresh device: pull from cloud into local
-    await downloadCloudData(userId);
-  }
 }

@@ -5,13 +5,15 @@ import type { GlucoseUnit, UserSettings } from "@/db/types";
 import { extractHashtagsFromNotes, type CleanupResult } from "@/lib/data-maintenance";
 import { loseItAuth, getStoredCreds, storeCreds } from "@/lib/loseit";
 import { useAuth } from "@/contexts/AuthContext";
-import { upsertSettings } from "@/lib/sync";
+import { upsertSettings, syncAllData } from "@/lib/sync";
 
 export function SettingsRoute() {
   const { user, signOut } = useAuth();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [cleanup, setCleanup] = useState<CleanupResult | null>(null);
   const [cleaning, setCleaning] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ uploaded: number; downloaded: number } | 'error' | null>(null);
 
   // Theme
   const [theme, setThemeState] = useState<'dark' | 'light'>(() =>
@@ -84,6 +86,21 @@ export function SettingsRoute() {
       setLiStatus({ ok: false, message: msg });
     } finally {
       setLiConnecting(false);
+    }
+  }
+
+  async function runSync() {
+    if (!user) return;
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const result = await syncAllData(user.id);
+      sessionStorage.removeItem('ember-cloud-synced');
+      setSyncResult(result);
+    } catch {
+      setSyncResult('error');
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -276,6 +293,25 @@ export function SettingsRoute() {
       {/* Data */}
       <SettingsSection title="Data">
         <div style={{ borderRadius: 20, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', overflow: 'hidden' }}>
+          {user && (
+            <button
+              onClick={runSync}
+              disabled={syncing}
+              style={{
+                width: '100%', padding: '15px 18px', border: 'none', background: 'transparent',
+                borderBottom: '1px solid hsl(var(--border))',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                textAlign: 'left', cursor: 'pointer', color: 'hsl(var(--foreground))',
+                fontFamily: '"Geist", system-ui, sans-serif', opacity: syncing ? 0.6 : 1,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{syncing ? 'Syncing…' : 'Sync data now'}</div>
+                <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Merge this device with cloud.</div>
+              </div>
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="1.6" strokeLinecap="round"><path d="M1 1l6 6-6 6"/></svg>
+            </button>
+          )}
           <button
             onClick={runCleanup}
             disabled={cleaning}
@@ -307,6 +343,24 @@ export function SettingsRoute() {
             <svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="1.6" strokeLinecap="round"><path d="M1 1l6 6-6 6"/></svg>
           </button>
         </div>
+        {syncResult && (
+          <div style={{
+            marginTop: 8, borderRadius: 12, padding: '10px 14px', fontSize: 12,
+            border: `1px solid ${syncResult === 'error' ? 'rgba(185,122,99,0.3)' : 'rgba(165,183,122,0.3)'}`,
+            background: syncResult === 'error' ? 'rgba(185,122,99,0.06)' : 'rgba(165,183,122,0.06)',
+            color: syncResult === 'error' ? '#B97A63' : '#A5B77A',
+          }}>
+            {syncResult === 'error'
+              ? 'Sync failed — check your connection and try again.'
+              : syncResult.uploaded === 0 && syncResult.downloaded === 0
+                ? 'Already up to date.'
+                : [
+                    syncResult.uploaded > 0 && `↑ ${syncResult.uploaded} uploaded`,
+                    syncResult.downloaded > 0 && `↓ ${syncResult.downloaded} downloaded`,
+                  ].filter(Boolean).join(' · ')
+            }
+          </div>
+        )}
         {cleanup && (
           <div style={{ marginTop: 8, borderRadius: 12, padding: '10px 14px', fontSize: 12, border: '1px solid rgba(200,144,121,0.3)', background: 'rgba(200,144,121,0.06)', color: 'hsl(var(--muted-foreground))' }}>
             <span style={{ color: 'hsl(var(--foreground))' }}>
