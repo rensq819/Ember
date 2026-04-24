@@ -67,7 +67,9 @@ export async function loginToLoseIt(email, password) {
 
   const prefix = String(data.username ?? email).split("@")[0] ?? "User";
   const username = prefix.charAt(0).toUpperCase() + prefix.slice(1);
-  return { cookies, userId: data.user_id, username };
+  const accessToken = data.access_token ?? data.token ?? null;
+  console.log(`[loseit] login ok userId=${data.user_id} hasAccessToken=${!!accessToken}`);
+  return { cookies, userId: data.user_id, username, accessToken };
 }
 
 function getTimezoneOffset(tz) {

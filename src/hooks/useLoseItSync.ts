@@ -57,7 +57,8 @@ export function useLoseItSync() {
             foodData.entries.map((e) => ({ date: foodData.date, name: e.name, brand: e.brand, syncedAt }))
           );
         }
-        const summaries = dailySummaries?.length ? dailySummaries : summaryData ? [summaryData] : [];
+        const summaries = (dailySummaries?.length ? dailySummaries : summaryData ? [summaryData] : [])
+          .filter(s => s.date <= targetDate);  // drop future dates
         if (summaries.length > 0) {
           await db.dailyCalories.bulkPut(summaries.map(s => ({ ...s, syncedAt })));
         }
@@ -84,12 +85,17 @@ export function useLoseItSync() {
 
       setSyncingLabel(`${weekStart} – ${weekEnd}`);
 
-      const { dailySummaries } = await loseItHistory(weekStart, weekEnd);
+      const { dailySummaries, gotOldData } = await loseItHistory(weekStart, weekEnd);
       const syncedAt = Date.now();
 
-      if (dailySummaries.length > 0) {
-        await db.dailyCalories.bulkPut(dailySummaries.map(s => ({ ...s, syncedAt })));
-        // Only advance the pointer when we actually received data
+      const today = localDateStr();
+      const toSave = dailySummaries.filter(s => s.date <= today);  // drop future dates
+      if (toSave.length > 0) {
+        await db.dailyCalories.bulkPut(toSave.map(s => ({ ...s, syncedAt })));
+      }
+
+      // Only advance the pointer if the server confirmed it returned data from the old range
+      if (gotOldData) {
         localStorage.setItem(OLDEST_SYNCED_KEY, weekStart);
         setOldestSynced(weekStart);
       }

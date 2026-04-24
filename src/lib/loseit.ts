@@ -113,6 +113,7 @@ export interface SyncResult {
 
 export interface HistoryResult {
   dailySummaries: DailySummaryResult[];
+  gotOldData: boolean;
   restWorked: boolean;
 }
 
