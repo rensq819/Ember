@@ -447,17 +447,30 @@ export function FastRoute() {
                       {hit ? 'HIT' : 'SHORT'}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setEditingId(s.id ?? null)}
-                    style={{
-                      width: 30, height: 30, border: 'none', background: 'transparent',
-                      color: 'hsl(var(--muted-foreground))', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      borderRadius: 8, flexShrink: 0,
-                    }}
-                  >
-                    <IconPencil />
-                  </button>
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button
+                      onClick={() => setEditingId(s.id ?? null)}
+                      style={{
+                        width: 30, height: 30, border: 'none', background: 'transparent',
+                        color: 'hsl(var(--muted-foreground))', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderRadius: 8,
+                      }}
+                    >
+                      <IconPencil />
+                    </button>
+                    <button
+                      onClick={() => deleteHistorySession(s)}
+                      style={{
+                        width: 30, height: 30, border: 'none', background: 'transparent',
+                        color: 'hsl(var(--muted-foreground))', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderRadius: 8,
+                      }}
+                    >
+                      <IconTrash />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -735,6 +748,9 @@ function IconPencil() {
 }
 function IconX() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>;
+}
+function IconTrash() {
+  return <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9h8l1-9"/></svg>;
 }
 function IconFlameSmall() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5c1 2 3 3 3 6a3 3 0 01-6 0c0-1 .5-2 1-3 0 1 .5 1.5 1 1.5C7 3 8 2.5 8 1.5z"/></svg>;
