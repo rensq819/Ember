@@ -7,9 +7,9 @@ import { loseItAuth, getStoredCreds, storeCreds } from "@/lib/loseit";
 import {
   captureCallbackHash as captureKetoMojoHash,
   clearRefreshToken as clearKetoMojoToken,
-  fetchKetoMojoReadings,
   isKetoMojoConnected,
   startKetoMojoConnect,
+  syncKetoMojoReadings,
 } from "@/lib/keto-mojo";
 import { useAuth } from "@/contexts/AuthContext";
 import { upsertSettings, syncAllData } from "@/lib/sync";
@@ -38,7 +38,7 @@ export function SettingsRoute() {
 
   // Keto-Mojo
   const [kmConnected, setKmConnected] = useState<boolean | null>(null);
-  const [kmTesting, setKmTesting] = useState(false);
+  const [kmSyncing, setKmSyncing] = useState(false);
   const [kmStatus, setKmStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
@@ -99,22 +99,21 @@ export function SettingsRoute() {
     setKmStatus(null);
   }
 
-  async function testKetoMojo() {
-    setKmTesting(true);
+  async function syncKetoMojo() {
+    setKmSyncing(true);
     setKmStatus(null);
     try {
-      const to = new Date();
-      const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const readings = await fetchKetoMojoReadings({
-        from: from.toISOString(),
-        to: to.toISOString(),
-        types: ["glucose", "ketone"],
-      });
-      setKmStatus({ ok: true, message: `Pulled ${readings.length} reading${readings.length === 1 ? "" : "s"} (last 30 days).` });
+      const result = await syncKetoMojoReadings({ userId: user?.id, days: 30 });
+      const parts = [
+        `${result.fetched} fetched`,
+        `${result.created} new`,
+        result.alreadyImported > 0 ? `${result.alreadyImported} already had` : null,
+      ].filter(Boolean);
+      setKmStatus({ ok: true, message: parts.join(" · ") + " (last 30 days)" });
     } catch (e) {
-      setKmStatus({ ok: false, message: e instanceof Error ? e.message : "Fetch failed" });
+      setKmStatus({ ok: false, message: e instanceof Error ? e.message : "Sync failed" });
     } finally {
-      setKmTesting(false);
+      setKmSyncing(false);
     }
   }
 
@@ -371,17 +370,17 @@ export function SettingsRoute() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <button
-              onClick={testKetoMojo}
-              disabled={kmTesting}
+              onClick={syncKetoMojo}
+              disabled={kmSyncing}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 borderRadius: 14, border: '1px solid hsl(var(--border))', padding: '12px',
                 background: 'hsl(var(--card))', color: 'hsl(var(--foreground))',
-                fontSize: 13, fontWeight: 500, cursor: 'pointer', opacity: kmTesting ? 0.6 : 1,
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', opacity: kmSyncing ? 0.6 : 1,
                 fontFamily: '"Geist", system-ui, sans-serif',
               }}
             >
-              {kmTesting ? "Fetching…" : "Test fetch (30d)"}
+              {kmSyncing ? "Syncing…" : "Sync readings (30d)"}
             </button>
             <button
               onClick={disconnectKetoMojo}
