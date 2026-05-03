@@ -17,9 +17,13 @@ export default async function handler(req, res) {
     const tokens = await exchangeCode({ code, verifier: cookie.verifier });
     clearOauthCookie(res);
 
+    if (!tokens.refresh_token) {
+      throw new Error(`No refresh_token in response. Got fields: ${Object.keys(tokens).join(", ")}. Check that the OAuth client has 'refresh_token' grant type enabled and is_active=true in the partner portal.`);
+    }
+
     const fragment = new URLSearchParams({
       keto_mojo_connected: "1",
-      refresh_token: tokens.refresh_token || "",
+      refresh_token: tokens.refresh_token,
     }).toString();
     res.statusCode = 302;
     res.setHeader("Location", `${APP_BASE}/settings#${fragment}`);

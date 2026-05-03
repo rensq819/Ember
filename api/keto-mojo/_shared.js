@@ -52,11 +52,13 @@ function basicAuthHeader() {
 }
 
 export async function exchangeCode({ code, verifier }) {
-  const { REDIRECT_URI } = requireConfig();
+  const { CLIENT_ID, REDIRECT_URI } = requireConfig();
   const body = new URLSearchParams({
     grant_type: "authorization_code",
-    code,
+    client_id: CLIENT_ID,
+    scope: SCOPES,
     redirect_uri: REDIRECT_URI,
+    code,
     code_verifier: verifier,
   });
   const res = await fetch(`${AUTH_BASE}/api/v1/oauth/token`, {
@@ -74,7 +76,13 @@ export async function exchangeCode({ code, verifier }) {
 }
 
 export async function refreshAccessToken(refreshToken) {
-  const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken });
+  const { CLIENT_ID } = requireConfig();
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+  });
   const res = await fetch(`${AUTH_BASE}/api/v1/oauth/token`, {
     method: "POST",
     headers: {
