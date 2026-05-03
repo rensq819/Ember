@@ -16,7 +16,16 @@
       "Bash(npm.cmd run *)",
       "Bash(npx tsc *)",
       "PowerShell(npm.cmd run typecheck)",
-      "PowerShell(& \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" run typecheck)"
+      "PowerShell(& \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" run typecheck)",
+      "WebFetch(domain:keto-mojo.com)",
+      "WebSearch",
+      "WebFetch(domain:keto-mojo.github.io)",
+      "WebFetch(domain:help.validic.com)",
+      "Bash(curl -sL \"https://keto-mojo.github.io/MyMojoHealth-public-docs/\")",
+      "Bash(curl -sL \"https://keto-mojo.github.io/MyMojoHealth-public-docs/mmh_docs.yaml\" -o /tmp/mmh_docs.yaml)",
+      "Read(//tmp/**)",
+      "Bash(npm run *)",
+      "Bash(git add *)"
     ]
   }
 }

@@ -4,6 +4,13 @@ import { DEFAULT_SETTINGS, db, getSettings } from "@/db";
 import type { GlucoseUnit, UserSettings } from "@/db/types";
 import { extractHashtagsFromNotes, type CleanupResult } from "@/lib/data-maintenance";
 import { loseItAuth, getStoredCreds, storeCreds } from "@/lib/loseit";
+import {
+  captureCallbackHash as captureKetoMojoHash,
+  clearRefreshToken as clearKetoMojoToken,
+  fetchKetoMojoReadings,
+  isKetoMojoConnected,
+  startKetoMojoConnect,
+} from "@/lib/keto-mojo";
 import { useAuth } from "@/contexts/AuthContext";
 import { upsertSettings, syncAllData } from "@/lib/sync";
 
@@ -29,6 +36,11 @@ export function SettingsRoute() {
   const [liAuthenticated, setLiAuthenticated] = useState<boolean | null>(null);
   const [liUsername, setLiUsername] = useState<string | null>(null);
 
+  // Keto-Mojo
+  const [kmConnected, setKmConnected] = useState<boolean | null>(null);
+  const [kmTesting, setKmTesting] = useState(false);
+  const [kmStatus, setKmStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
   useEffect(() => {
     getSettings().then((s) => {
       setSettings(s);
@@ -43,6 +55,10 @@ export function SettingsRoute() {
     } else {
       setLiAuthenticated(false);
     }
+
+    const captured = captureKetoMojoHash();
+    setKmConnected(isKetoMojoConnected());
+    if (captured) setKmStatus({ ok: true, message: "Connected to Keto-Mojo." });
   }, []);
 
   function applyTheme(t: 'dark' | 'light') {
@@ -66,6 +82,35 @@ export function SettingsRoute() {
     const next = { ...settings, dietMode: mode };
     setSettings(next);
     await db.userSettings.put(next);
+  }
+
+  function connectKetoMojo() {
+    startKetoMojoConnect();
+  }
+
+  function disconnectKetoMojo() {
+    clearKetoMojoToken();
+    setKmConnected(false);
+    setKmStatus(null);
+  }
+
+  async function testKetoMojo() {
+    setKmTesting(true);
+    setKmStatus(null);
+    try {
+      const to = new Date();
+      const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const readings = await fetchKetoMojoReadings({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        types: ["glucose", "ketone"],
+      });
+      setKmStatus({ ok: true, message: `Pulled ${readings.length} reading${readings.length === 1 ? "" : "s"} (last 30 days).` });
+    } catch (e) {
+      setKmStatus({ ok: false, message: e instanceof Error ? e.message : "Fetch failed" });
+    } finally {
+      setKmTesting(false);
+    }
   }
 
   async function connectLoseIt() {
@@ -287,6 +332,76 @@ export function SettingsRoute() {
         )}
         <p className="text-xs mt-2.5" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.5 }}>
           Credentials are stored only in your browser and never sent to any server except LoseIt.
+        </p>
+      </SettingsSection>
+
+      {/* Keto-Mojo */}
+      <SettingsSection title="Keto-Mojo glucose & ketones">
+        {kmConnected === true && (
+          <div className="flex items-center gap-2 text-sm mb-3" style={{ color: '#A5B77A' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#A5B77A', display: 'inline-block', boxShadow: '0 0 8px #A5B77A' }} />
+            Connected
+          </div>
+        )}
+        {kmConnected === false && (
+          <div className="flex items-center gap-2 text-xs mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', border: '1.5px solid hsl(var(--muted-foreground))', display: 'inline-block' }} />
+            Not connected — authorize via MyMojoHealth
+          </div>
+        )}
+        {kmConnected === false ? (
+          <button
+            onClick={connectKetoMojo}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              borderRadius: 14, border: '1px solid hsl(var(--border))', padding: '12px',
+              background: 'hsl(var(--card))', color: 'hsl(var(--foreground))',
+              fontSize: 14, fontWeight: 500, cursor: 'pointer',
+              fontFamily: '"Geist", system-ui, sans-serif',
+            }}
+          >
+            <Plug size={14} />
+            Connect Keto-Mojo
+          </button>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button
+              onClick={testKetoMojo}
+              disabled={kmTesting}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                borderRadius: 14, border: '1px solid hsl(var(--border))', padding: '12px',
+                background: 'hsl(var(--card))', color: 'hsl(var(--foreground))',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', opacity: kmTesting ? 0.6 : 1,
+                fontFamily: '"Geist", system-ui, sans-serif',
+              }}
+            >
+              {kmTesting ? "Fetching…" : "Test fetch (30d)"}
+            </button>
+            <button
+              onClick={disconnectKetoMojo}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                borderRadius: 14, border: '1px solid hsl(var(--border))', padding: '12px',
+                background: 'transparent', color: '#B97A63',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                fontFamily: '"Geist", system-ui, sans-serif',
+              }}
+            >
+              Disconnect
+            </button>
+          </div>
+        )}
+        {kmStatus && (
+          <div style={{
+            marginTop: 8, borderRadius: 12, padding: '10px 14px', fontSize: 12,
+            border: `1px solid ${kmStatus.ok ? 'rgba(165,183,122,0.3)' : 'rgba(185,122,99,0.3)'}`,
+            background: kmStatus.ok ? 'rgba(165,183,122,0.06)' : 'rgba(185,122,99,0.06)',
+            color: kmStatus.ok ? '#A5B77A' : '#B97A63',
+          }}>{kmStatus.message}</div>
+        )}
+        <p className="text-xs mt-2.5" style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.5 }}>
+          Authorizes once via MyMojoHealth. Refresh token is stored only in your browser.
         </p>
       </SettingsSection>
 
