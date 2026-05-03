@@ -84,8 +84,13 @@ export function SettingsRoute() {
     await db.userSettings.put(next);
   }
 
-  function connectKetoMojo() {
-    startKetoMojoConnect();
+  async function connectKetoMojo() {
+    setKmStatus(null);
+    try {
+      await startKetoMojoConnect();
+    } catch (e) {
+      setKmStatus({ ok: false, message: e instanceof Error ? e.message : "Connect failed" });
+    }
   }
 
   function disconnectKetoMojo() {

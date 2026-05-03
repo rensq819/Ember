@@ -30,8 +30,15 @@ export function isKetoMojoConnected(): boolean {
   return !!getStoredRefreshToken();
 }
 
-export function startKetoMojoConnect() {
-  window.location.href = `${PROXY}/auth`;
+export async function startKetoMojoConnect() {
+  const res = await fetch(`${PROXY}/auth`, { credentials: "same-origin" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? `Auth init failed (${res.status})`);
+  }
+  const { authorize_url } = await res.json();
+  if (!authorize_url) throw new Error("No authorize_url returned.");
+  window.location.href = authorize_url;
 }
 
 // Reads the OAuth callback fragment (set by /api/keto-mojo/callback) and persists the

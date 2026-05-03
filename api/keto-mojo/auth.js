@@ -8,9 +8,14 @@ export default function handler(req, res) {
     const { verifier, challenge, state } = generatePkce();
     setOauthCookie(res, { verifier, state });
     const url = buildAuthorizeUrl({ state, challenge });
-    res.statusCode = 302;
-    res.setHeader("Location", url);
-    res.end();
+
+    if (req.query.redirect === "1") {
+      res.statusCode = 302;
+      res.setHeader("Location", url);
+      res.end();
+      return;
+    }
+    res.status(200).json({ authorize_url: url });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
