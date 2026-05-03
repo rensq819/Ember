@@ -59,7 +59,7 @@ export async function exchangeCode({ code, verifier }) {
     redirect_uri: REDIRECT_URI,
     code_verifier: verifier,
   });
-  const res = await fetch(`${API_BASE}/api/v1/oauth/token`, {
+  const res = await fetch(`${AUTH_BASE}/api/v1/oauth/token`, {
     method: "POST",
     headers: {
       Authorization: basicAuthHeader(),
@@ -75,7 +75,7 @@ export async function exchangeCode({ code, verifier }) {
 
 export async function refreshAccessToken(refreshToken) {
   const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken });
-  const res = await fetch(`${API_BASE}/api/v1/oauth/token`, {
+  const res = await fetch(`${AUTH_BASE}/api/v1/oauth/token`, {
     method: "POST",
     headers: {
       Authorization: basicAuthHeader(),
